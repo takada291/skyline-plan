@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>架線計画 (skyline-plan)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- GA4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXBP6CPKLP"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-WXBP6CPKLP');
+    </script>
+
+    <style>
+        body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; overflow: hidden; }
+
+        #controls { padding: 8px 10px; background: #f8f9fa; display: flex; gap: 7px; align-items: center; z-index: 1000; border-bottom: 1px solid #ccc; flex-wrap: wrap; font-size: 13px; }
+        .ctrl-group { display: inline-flex; align-items: center; gap: 5px; }
+        .divider { color: #bbb; user-select: none; }
+
+        #main-container { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
+        #map { flex-grow: 1; width: 100%; min-height: 45%; cursor: grab; }
+
+        #chart-container {
+            height: 260px; width: 100%; background: #fff; border-top: 2px solid #ccc; box-sizing: border-box; padding: 8px 12px; display: flex; flex-direction: column; flex-shrink: 0;
+        }
+        #chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-weight: bold; font-size: 13px; color: #333; flex-wrap: wrap; gap: 8px; }
+        #stats-area { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-weight: normal; font-size: 12.5px; color: #222; }
+        .stat-item strong { color: #0056b3; }
+        .badge-ok { background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #c3e6cb; }
+        .badge-warn { background: #fff3cd; color: #856404; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #ffeeba; }
+        .badge-ng { background: #f8d7da; color: #721c24; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #f5c6cb; }
+        #chart-note { font-size: 11px; color: #777; text-align: right; margin-top: 2px; }
+
+        button { padding: 5px 10px; font-size: 12.5px; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; white-space: nowrap; }
+        .btn-blue { background-color: #007bff; } .btn-blue:hover { background-color: #0056b3; }
+        .btn-green { background-color: #28a745; } .btn-green:hover { background-color: #218838; }
+        .btn-red { background-color: #dc3545; } .btn-red:hover { background-color: #c82333; }
+        .btn-gray { background-color: #6c757d; } .btn-gray:hover { background-color: #5a6268; }
+        .btn-orange { background-color: #ff9800; } .btn-orange:hover { background-color: #e68a00; }
+        .btn-purple { background-color: #9c27b0; } .btn-purple:hover { background-color: #7b1fa2; }
+        .btn-teal { background-color: #20c997; } .btn-teal:hover { background-color: #1aa179; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        select, input[type="text"], input[type="number"] { padding: 4px 6px; font-size: 12.5px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="number"] { width: 46px; text-align: right; }
+
+        .mode-active { border: 2px solid #8b0000; box-shadow: 0 0 8px rgba(211,47,47,0.8); background-color: #b71c1c; }
+        .elev-active { border: 2px solid #4a148c; box-shadow: 0 0 8px rgba(156,39,176,0.8); background-color: #6a1b9a; }
+
+        #loading { display: none; font-weight: bold; color: #d32f2f; font-size: 13px; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        /* 元柱・先柱マーカーのスタイル */
+        .pole-marker {
+            width: 24px; height: 24px; border-radius: 50%; border: 2px solid #ffffff;
+            color: #ffffff; font-weight: bold; font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            cursor: move;
+        }
+        .pole-start { background-color: #28a745; }
+        .pole-end { background-color: #dc3545; }
+
+        #empty-guide {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            color: #666; font-size: 13.5px; pointer-events: none; text-align: center; padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="controls">
+    <span style="font-weight: bold; color: #333; font-size: 14px;">架線計画v0.1</span>
+
+    <select id="prefSelect" onchange="changePref()">
+        <option value="43.064,141.347">北海道</option>
+        <option value="40.824,140.740">青森県</option>
+        <option value="39.703,141.152">岩手県</option>
+        <option value="38.268,140.871">宮城県</option>
+        <option value="39.718,140.102">秋田県</option>
+        <option value="38.255,140.339">山形県</option>
+        <option value="37.750,140.467">福島県</option>
+        <option value="36.341,140.446">茨城県</option>
+        <option value="36.565,139.883">栃木県</option>
+        <option value="36.391,139.060">群馬県</option>
+        <option value="35.857,139.648">埼玉県</option>
+        <option value="35.605,140.123">千葉県</option>
+        <option value="35.689,139.691">東京都</option>
+        <option value="35.447,139.642">神奈川県</option>
+        <option value="37.902,139.023">新潟県</option>
+        <option value="36.695,137.211">富山県</option>
+        <option value="36.594,136.625">石川県</option>
+        <option value="36.065,136.221" selected>福井県</option>
+        <option value="35.663,138.568">山梨県</option>
+        <option value="36.651,138.181">長野県</option>
+        <option value="35.391,136.722">岐阜県</option>
+        <option value="34.976,138.383">静岡県</option>
+        <option value="35.180,136.906">愛知県</option>
+        <option value="34.730,136.508">三重県</option>
+        <option value="35.021,135.755">滋賀県</option>
+        <option value="35.011,135.768">京都府</option>
+        <option value="34.686,135.520">大阪府</option>
+        <option value="34.691,135.183">兵庫県</option>
+        <option value="34.685,135.832">奈良県</option>
+        <option value="34.226,135.167">和歌山県</option>
+        <option value="35.503,134.238">鳥取県</option>
+        <option value="35.472,133.050">島根県</option>
+        <option value="34.661,133.935">岡山県</option>
+        <option value="34.396,132.459">広島県</option>
+        <option value="34.186,131.470">山口県</option>
+        <option value="34.065,134.559">徳島県</option>
+        <option value="34.340,134.043">香川県</option>
+        <option value="33.841,132.766">愛媛県</option>
+        <option value="33.559,133.531">高知県</option>
+        <option value="33.606,130.418">福岡県</option>
+        <option value="33.249,130.298">佐賀県</option>
+        <option value="32.744,129.873">長崎県</option>
+        <option value="32.789,130.741">熊本県</option>
+        <option value="33.238,131.612">大分県</option>
+        <option value="31.911,131.423">宮崎県</option>
+        <option value="31.560,130.558">鹿児島県</option>
+        <option value="26.212,127.681">沖縄県</option>
+    </select>
+
+    <div class="ctrl-group">
+        <input type="text" id="latLonInput" placeholder="緯度, 経度" style="width: 110px;">
+        <button class="btn-gray" onclick="jumpToCoordinates()">移動</button>
+    </div>
+
+    <span class="divider">|</span>
+
+    <div class="ctrl-group">
+        <label>元柱高:<input type="number" id="poleStartH" value="10" min="1" max="50" step="1" oninput="recomputeFromParams()">m</label>
+        <label>先柱高:<input type="number" id="poleEndH" value="10" min="1" max="50" step="1" oninput="recomputeFromParams()">m</label>
+        <label>垂下比:<input type="number" id="sagRatio" value="6" min="1" max="15" step="0.5" oninput="recomputeFromParams()">%</label>
+        <label>地上高:<input type="number" id="minClearance" value="8" min="0" max="50" step="1" oninput="recomputeFromParams()">m</label>
+        <label>横取(片側):<input type="number" id="sideWidth" value="30" min="0" max="150" step="5" oninput="recomputeFromParams()">m</label>
+    </div>
+
+    <span class="divider">|</span>
+
+    <div class="ctrl-group">
+        <button class="btn-red" id="btnPlace" onclick="togglePlaceMode()">🖍️ 設置</button>
+        <button class="btn-orange" onclick="swapPoles()" title="元柱と先柱を入れ替え">⇄ 入替</button>
+        <button class="btn-gray" onclick="clearSkyline()">🗑️ 消去</button>
+    </div>
+
+    <span class="divider">|</span>
+
+    <div class="ctrl-group">
+        <button class="btn-green" onclick="saveKML()">💾 保存</button>
+        <button class="btn-teal" onclick="document.getElementById('kmlInput').click()">📂 読込</button>
+        <input type="file" id="kmlInput" accept=".kml" style="display: none;" onchange="loadKML(event)">
+    </div>
+
+    <span class="divider">|</span>
+
+    <div class="ctrl-group">
+        <button class="btn-purple" id="btnElevation" onclick="toggleElevationLayer()">🗺️ 5m標高</button>
+        <button class="btn-gray" id="btnExport" onclick="exportA4()">💾 A4切出</button>
+    </div>
+
+    <span id="loading">処理中...</span>
+</div>
+
+<div id="main-container">
+    <div id="map"></div>
+    <div id="chart-container">
+        <div id="chart-header">
+            <span>📉 架線縦断図（地盤断面・荷重軌跡）</span>
+            <div id="stats-area">
+                <span class="stat-item" id="statSummary">元柱と先柱を地図上に設置してください</span>
+                <span id="statusBadge" style="display: none;"></span>
+            </div>
+        </div>
+        <div style="flex-grow: 1; position: relative; min-height: 0;">
+            <div id="empty-guide">「🖍️ 設置」ボタンを押し、地図上で 1点目（元柱：緑）→ 2点目（先柱：赤）の順にクリックしてください。</div>
+            <canvas id="profileChart"></canvas>
+        </div>
+        <div id="chart-note">※放物線近似（中央垂下比）と地理院DEMによる簡易検証です。実際の架設時は作業主任者による強度計算と現地踏査を行ってください。</div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/piexifjs@1.0.6/piexif.js"></script>
+
+<script>
+    // --- 1. 地図の初期化 ---
+    const map = L.map('map').setView([36.065, 136.221], 15);
+
+    const stdMap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+        attribution: '地理院タイル (標準地図)', maxZoom: 18
+    });
+    const orthoMap = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/ort/{z}/{x}/{y}.jpg', {
+        attribution: '地理院タイル (オルソ画像)', maxZoom: 18
+    });
+
+    stdMap.addTo(map);
+    L.control.layers({ "標準地形図": stdMap, "オルソ写真": orthoMap }).addTo(map);
+    L.control.scale({ imperial: false, metric: true }).addTo(map);
+
+    // --- A4横サイズ枠（1/5,000相当：東西1485m × 南北1050m） ---
+    const frameLayer = L.rectangle([[0,0], [0,0]], {
+        color: "#ff0000", weight: 2, fillOpacity: 0.0, interactive: false, dashArray: '5, 5'
+    }).addTo(map);
+
+    function updateFrame() {
+        const center = map.getCenter();
+        const widthM = 1485 / 2;
+        const heightM = 1050 / 2;
+        const R = 6378137;
+        const dLat = (heightM / R) * (180 / Math.PI);
+        const dLng = (widthM / (R * Math.cos(Math.PI * center.lat / 180))) * (180 / Math.PI);
+        frameLayer.setBounds(L.latLngBounds([center.lat - dLat, center.lng - dLng], [center.lat + dLat, center.lng + dLng]));
+    }
+    map.on('move', updateFrame);
+    updateFrame();
+
+    // --- 2. 状態管理 ---
+    let isPlaceMode = false;
+    let isFetching = false;
+    let startPoint = null; // { lat, lng } 元柱
+    let endPoint = null;   // { lat, lng } 先柱
+    let profileSamples = []; // [{ t, dist, lat, lng, groundEle, chordEle, loadEle, reqEle, clearance, status }]
+    let currentStats = null;
+
+    let startMarker = null;
+    let endMarker = null;
+    const skylineLayerGroup = L.layerGroup().addTo(map);
+    let elevationOverlay = null;
+    let myChart = null;
+
+    // DEMタイルキャッシュ（高速な断面再計算用）
+    const demTileCache = new Map();
+    const demPromiseCache = new Map();
+
+    function getParams() {
+        return {
+            poleStartH: Math.max(0, parseFloat(document.getElementById('poleStartH').value) || 0),
+            poleEndH: Math.max(0, parseFloat(document.getElementById('poleEndH').value) || 0),
+            sagRatio: Math.max(0.5, parseFloat(document.getElementById('sagRatio').value) || 6) / 100.0,
+            minClearance: Math.max(0, parseFloat(document.getElementById('minClearance').value) || 0),
+            sideWidth: Math.max(0, parseFloat(document.getElementById('sideWidth').value) || 0)
+        };
+    }
+
+    function togglePlaceMode(forceState) {
+        isPlaceMode = (typeof forceState === 'boolean') ? forceState : !isPlaceMode;
+        const btn = document.getElementById('btnPlace');
+        if (isPlaceMode) {
+            btn.classList.add('mode-active');
+            map.getContainer().style.cursor = 'crosshair';
+        } else {
+            btn.classList.remove('mode-active');
+            map.getContainer().style.cursor = 'grab';
+        }
+    }
+
+    map.on('click', async function(e) {
+        if (!isPlaceMode || isFetching) return;
+
+        if (!startPoint || (startPoint && endPoint)) {
+            // 新規に元柱を設置
+            startPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
+            endPoint = null;
+            profileSamples = [];
+            currentStats = null;
+            renderMarkersOnly();
+            skylineLayerGroup.clearLayers();
+            clearChartWithMessage('元柱（緑）を設置しました。次に先柱（赤）の位置をクリックしてください。');
+        } else {
+            // 先柱を設置して断面計算を実行
+            endPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
+            togglePlaceMode(false); // 2点揃ったらドラッグ調整しやすいよう設置モード解除
+            await analyzeSkyline();
+        }
+    });
+
+    function clearChartWithMessage(msg) {
+        if (myChart) { myChart.destroy(); myChart = null; }
+        document.getElementById('empty-guide').style.display = 'flex';
+        document.getElementById('empty-guide').textContent = msg;
+        document.getElementById('statSummary').textContent = msg;
+        document.getElementById('statusBadge').style.display = 'none';
+    }
+
+    async function swapPoles() {
+        if (!startPoint || !endPoint || isFetching) return;
+        const tmp = startPoint;
+        startPoint = endPoint;
+        endPoint = tmp;
+        await analyzeSkyline();
+    }
+
+    function clearSkyline() {
+        if (!startPoint && !endPoint) return;
+        if (!confirm('設置した架線計画を消去しますか？')) return;
+        startPoint = null;
+        endPoint = null;
+        profileSamples = [];
+        currentStats = null;
+        if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+        if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
+        skylineLayerGroup.clearLayers();
+        clearChartWithMessage('「🖍️ 設置」ボタンを押し、地図上で 1点目（元柱：緑）→ 2点目（先柱：赤）の順にクリックしてください。');
+    }
+
+    // --- 3. 地理院DEM取得（タイルキャッシュ＋10mメッシュフォールバック） ---
+    function loadImage(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = url;
+        });
+    }
+
+    async function getDemTileData(z, x, y, types) {
+        const key = `${z}/${x}/${y}/${types[0]}`;
+        if (demTileCache.has(key)) return demTileCache.get(key);
+        if (demPromiseCache.has(key)) return demPromiseCache.get(key);
+
+        const promise = (async () => {
+            for (const type of types) {
+                try {
+                    const url = `https://cyberjapandata.gsi.go.jp/xyz/${type}/${z}/${x}/${y}.png`;
+                    const img = await loadImage(url);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 256;
+                    canvas.height = 256;
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    ctx.drawImage(img, 0, 0);
+                    const imgData = ctx.getImageData(0, 0, 256, 256).data;
+                    demTileCache.set(key, imgData);
+                    return imgData;
+                } catch (e) {
+                    // 次のDEM種別へ
+                }
+            }
+            demTileCache.set(key, null);
+            return null;
+        })();
+
+        demPromiseCache.set(key, promise);
+        const res = await promise;
+        demPromiseCache.delete(key);
+        return res;
+    }
+
+    function decodePixelZ(data, px, py) {
+        if (!data) return null;
+        const cx = Math.max(0, Math.min(255, px));
+        const cy = Math.max(0, Math.min(255, py));
+        const idx = (cy * 256 + cx) * 4;
+        const r = data[idx], g = data[idx + 1], b = data[idx + 2], a = data[idx + 3];
+        if (a === 0 || (r === 128 && g === 0 && b === 0)) return null;
+        const v = (r << 16) + (g << 8) + b;
+        return (v < 8388608) ? v * 0.01 : (v - 16777216) * 0.01;
+    }
+
+    async function getElevation(lat, lng) {
+        // まずZoom 15の5mDEM (5A -> 5B -> 5C) を取得
+        const z15 = 15;
+        const n15 = Math.pow(2, z15);
+        const fx15 = (lng + 180) / 360 * n15;
+        const fy15 = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n15;
+        const tx15 = Math.floor(fx15);
+        const ty15 = Math.floor(fy15);
+        const px15 = Math.floor((fx15 - tx15) * 256);
+        const py15 = Math.floor((fy15 - ty15) * 256);
+
+        const data15 = await getDemTileData(z15, tx15, ty15, ['dem5a_png', 'dem5b_png', 'dem5c_png']);
+        const ele15 = decodePixelZ(data15, px15, py15);
+        if (ele15 !== null) return ele15;
+
+        // 5mDEM未整備エリアはZoom 14の10mDEM (dem_png) へフォールバック
+        const z14 = 14;
+        const n14 = Math.pow(2, z14);
+        const fx14 = (lng + 180) / 360 * n14;
+        const fy14 = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n14;
+        const tx14 = Math.floor(fx14);
+        const ty14 = Math.floor(fy14);
+        const px14 = Math.floor((fx14 - tx14) * 256);
+        const py14 = Math.floor((fy14 - ty14) * 256);
+
+        const data14 = await getDemTileData(z14, tx14, ty14, ['dem_png']);
+        const ele14 = decodePixelZ(data14, px14, py14);
+        return (ele14 !== null) ? ele14 : 0;
+    }
+
+    // --- 4. 横取り範囲ポリゴン計算 ---
+    function computeYardingPolygon(p1, p2, sideWidthM) {
+        if (!p1 || !p2 || sideWidthM <= 0) return null;
+        const EARTH_R = 6378137.0;
+        const midLatRad = ((p1.lat + p2.lat) / 2) * Math.PI / 180;
+        const mPerDegLat = (Math.PI / 180) * EARTH_R;
+        const mPerDegLng = (Math.PI / 180) * EARTH_R * Math.cos(midLatRad);
+
+        const dx = (p2.lng - p1.lng) * mPerDegLng;
+        const dy = (p2.lat - p1.lat) * mPerDegLat;
+        const len = Math.hypot(dx, dy);
+        if (len < 1) return null;
+
+        // 架線に直交する単位ベクトル（左右オフセット）
+        const nx = (-dy / len) * sideWidthM;
+        const ny = (dx / len) * sideWidthM;
+
+        const dLat = ny / mPerDegLat;
+        const dLng = nx / mPerDegLng;
+
+        return [
+            [p1.lat + dLat, p1.lng + dLng],
+            [p2.lat + dLat, p2.lng + dLng],
+            [p2.lat - dLat, p2.lng - dLng],
+            [p1.lat - dLat, p1.lng - dLng]
+        ];
+    }
+
+    // --- 5. 架線断面解析・たわみ計算 ---
+    async function analyzeSkyline() {
+        if (!startPoint || !endPoint) return;
+        isFetching = true;
+        const loading = document.getElementById('loading');
+        loading.textContent = '断面計算中...';
+        loading.style.display = 'inline';
+
+        try {
+            const horizDist = map.distance([startPoint.lat, startPoint.lng], [endPoint.lat, endPoint.lng]);
+            if (horizDist < 5) {
+                alert('元柱と先柱が近すぎます（5m以上離して設置してください）。');
+                return;
+            }
+
+            // 約5m〜10mピッチ（30〜100分割）でサンプリング
+            const steps = Math.max(30, Math.min(100, Math.ceil(horizDist / 5)));
+            const coords = [];
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                coords.push({
+                    t: t,
+                    dist: horizDist * t,
+                    lat: startPoint.lat + (endPoint.lat - startPoint.lat) * t,
+                    lng: startPoint.lng + (endPoint.lng - startPoint.lng) * t
+                });
+            }
+
+            // 標高を一括取得（タイルキャッシュにより高速動作）
+            const elevations = await Promise.all(coords.map(c => getElevation(c.lat, c.lng)));
+            profileSamples = coords.map((c, idx) => ({
+                ...c,
+                groundEle: elevations[idx]
+            }));
+
+            recomputeFromParams();
+        } catch (err) {
+            console.error(err);
+            alert('断面データの計算に失敗しました。\n' + err.message);
+        } finally {
+            loading.style.display = 'none';
+            loading.textContent = '処理中...';
+            isFetching = false;
+        }
+    }
+
+    // パラメータ変更時はDEM再取得なしで瞬時に再計算・再描画
+    function recomputeFromParams() {
+        if (!startPoint || !endPoint || profileSamples.length < 2) {
+            renderMarkersOnly();
+            return;
+        }
+
+        const params = getParams();
+        const L = profileSamples[profileSamples.length - 1].dist;
+        const zStart = profileSamples[0].groundEle;
+        const zEnd = profileSamples[profileSamples.length - 1].groundEle;
+        const H1 = zStart + params.poleStartH;
+        const H2 = zEnd + params.poleEndH;
+
+        let minClearanceVal = Infinity;
+        let minClearanceDist = 0;
+        let hasGroundHit = false;
+        let hasClearanceWarn = false;
+
+        profileSamples.forEach(pt => {
+            const t = pt.t;
+            const chordEle = H1 + (H2 - H1) * t;
+            // 中央垂下比 s に基づく放物線近似（荷重軌跡線）
+            const sag = 4 * params.sagRatio * L * t * (1 - t);
+            const loadEle = chordEle - sag;
+            const clearance = loadEle - pt.groundEle;
+            const reqEle = pt.groundEle + params.minClearance;
+
+            let status = 'ok';
+            if (clearance < 0) {
+                status = 'ng';
+                hasGroundHit = true;
+            } else if (clearance < params.minClearance) {
+                status = 'warn';
+                hasClearanceWarn = true;
+            }
+
+            if (clearance < minClearanceVal) {
+                minClearanceVal = clearance;
+                minClearanceDist = pt.dist;
+            }
+
+            pt.chordEle = chordEle;
+            pt.loadEle = loadEle;
+            pt.reqEle = reqEle;
+            pt.clearance = clearance;
+            pt.status = status;
+        });
+
+        const diffH = H2 - H1;
+        const slopeDist = Math.hypot(L, diffH);
+        const slopeDeg = Math.atan2(Math.abs(diffH), L) * (180 / Math.PI);
+        const maxSag = params.sagRatio * L;
+
+        currentStats = {
+            horizDist: L,
+            slopeDist: slopeDist,
+            diffH: diffH,
+            slopeDeg: slopeDeg,
+            maxSag: maxSag,
+            minClearanceVal: minClearanceVal,
+            minClearanceDist: minClearanceDist,
+            hasGroundHit: hasGroundHit,
+            hasClearanceWarn: hasClearanceWarn,
+            zStart: zStart,
+            zEnd: zEnd,
+            H1: H1,
+            H2: H2
+        };
+
+        renderMarkersOnly();
+        renderSkylineOverlays();
+        updateHeaderStats();
+        updateChart();
+    }
+
+    // --- 6. マップ描画（マーカー・架線ライン・横取り範囲） ---
+    function renderMarkersOnly() {
+        if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+        if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
+
+        if (startPoint) {
+            const icon = L.divIcon({
+                html: '<div class="pole-marker pole-start">元</div>',
+                className: '', iconSize: [28, 28], iconAnchor: [14, 14]
+            });
+            startMarker = L.marker([startPoint.lat, startPoint.lng], { icon: icon, draggable: true, zIndexOffset: 600 }).addTo(map);
+            startMarker.on('drag', (e) => {
+                const pos = e.target.getLatLng();
+                startPoint = { lat: pos.lat, lng: pos.lng };
+                renderQuickPreviewLine();
+            });
+            startMarker.on('dragend', async (e) => {
+                const pos = e.target.getLatLng();
+                startPoint = { lat: pos.lat, lng: pos.lng };
+                if (endPoint) await analyzeSkyline();
+            });
+        }
+
+        if (endPoint) {
+            const icon = L.divIcon({
+                html: '<div class="pole-marker pole-end">先</div>',
+                className: '', iconSize: [28, 28], iconAnchor: [14, 14]
+            });
+            endMarker = L.marker([endPoint.lat, endPoint.lng], { icon: icon, draggable: true, zIndexOffset: 600 }).addTo(map);
+            endMarker.on('drag', (e) => {
+                const pos = e.target.getLatLng();
+                endPoint = { lat: pos.lat, lng: pos.lng };
+                renderQuickPreviewLine();
+            });
+            endMarker.on('dragend', async (e) => {
+                const pos = e.target.getLatLng();
+                endPoint = { lat: pos.lat, lng: pos.lng };
+                if (startPoint) await analyzeSkyline();
+            });
+        }
+    }
+
+    // ドラッグ中の軽量プレビュー（ポリゴン＋基準線のみ追従）
+    function renderQuickPreviewLine() {
+        skylineLayerGroup.clearLayers();
+        if (!startPoint || !endPoint) return;
+        const params = getParams();
+        const polyCoords = computeYardingPolygon(startPoint, endPoint, params.sideWidth);
+        if (polyCoords) {
+            L.polygon(polyCoords, {
+                color: '#17a2b8', weight: 1.5, dashArray: '4, 4', fillColor: '#17a2b8', fillOpacity: 0.16, interactive: false
+            }).addTo(skylineLayerGroup);
+        }
+        L.polyline([[startPoint.lat, startPoint.lng], [endPoint.lat, endPoint.lng]], {
+            color: '#007bff', weight: 4, opacity: 0.85, interactive: false
+        }).addTo(skylineLayerGroup);
+    }
+
+    // 解析結果に基づく架線・干渉区間・横取り範囲の描画
+    function renderSkylineOverlays() {
+        skylineLayerGroup.clearLayers();
+        if (!startPoint || !endPoint || profileSamples.length < 2) return;
+
+        const params = getParams();
+
+        // 横取り範囲ポリゴン
+        const polyCoords = computeYardingPolygon(startPoint, endPoint, params.sideWidth);
+        if (polyCoords) {
+            L.polygon(polyCoords, {
+                color: '#17a2b8', weight: 1.5, dashArray: '4, 4', fillColor: '#17a2b8', fillOpacity: 0.16, interactive: false
+            }).addTo(skylineLayerGroup);
+        }
+
+        // 基本の架線ライン（青）
+        L.polyline([[startPoint.lat, startPoint.lng], [endPoint.lat, endPoint.lng]], {
+            color: '#007bff', weight: 4, opacity: 0.9, interactive: false
+        }).addTo(skylineLayerGroup);
+
+        // クリアランス不足・地盤接触の区間を色分けハイライト
+        for (let i = 0; i < profileSamples.length - 1; i++) {
+            const pA = profileSamples[i];
+            const pB = profileSamples[i + 1];
+            const isNg = (pA.status === 'ng' || pB.status === 'ng');
+            const isWarn = (!isNg && (pA.status === 'warn' || pB.status === 'warn'));
+
+            if (isNg || isWarn) {
+                L.polyline([[pA.lat, pA.lng], [pB.lat, pB.lng]], {
+                    color: isNg ? '#dc3545' : '#ff9800',
+                    weight: isNg ? 7 : 6,
+                    opacity: 0.95,
+                    interactive: false
+                }).addTo(skylineLayerGroup);
+            }
+        }
+    }
+
+    function updateHeaderStats() {
+        if (!currentStats) return;
+        const s = currentStats;
+        const sign = s.diffH >= 0 ? '+' : '';
+        const summaryHtml =
+            `水平距離: <strong>${s.horizDist.toFixed(0)}m</strong>` +
+            ` / 斜距離: <strong>${s.slopeDist.toFixed(0)}m</strong>` +
+            ` / 高低差: <strong>${sign}${s.diffH.toFixed(1)}m</strong>` +
+            ` / 傾斜角: <strong>${s.slopeDeg.toFixed(1)}°</strong>` +
+            ` / 最大たわみ: <strong>${s.maxSag.toFixed(1)}m</strong>` +
+            ` / 最小地上高: <strong style="color:${s.hasGroundHit ? '#dc3545' : (s.hasClearanceWarn ? '#d97706' : '#155724')};">${s.minClearanceVal.toFixed(1)}m</strong>`;
+        document.getElementById('statSummary').innerHTML = summaryHtml;
+
+        const badge = document.getElementById('statusBadge');
+        badge.style.display = 'inline-block';
+        if (s.hasGroundHit) {
+            badge.className = 'badge-ng';
+            badge.textContent = '❌ 地盤と干渉（架設不可）';
+        } else if (s.hasClearanceWarn) {
+            badge.className = 'badge-warn';
+            badge.textContent = '⚠️ 必要地上高が不足する区間あり';
+        } else {
+            badge.className = 'badge-ok';
+            badge.textContent = '✅ 必要地上高を確保';
+        }
+    }
+
+    // --- 7. 縦断図 (Chart.js + 元柱/先柱縦線プラグイン) ---
+    const poleDrawingPlugin = {
+        id: 'poleDrawingPlugin',
+        afterDatasetsDraw(chart) {
+            if (!currentStats || profileSamples.length < 2) return;
+            const { ctx, scales: { x, y } } = chart;
+            const lastIdx = profileSamples.length - 1;
+
+            ctx.save();
+            // 元柱（緑の縦線）
+            const x0 = x.getPixelForValue(0);
+            const y0Bottom = y.getPixelForValue(currentStats.zStart);
+            const y0Top = y.getPixelForValue(currentStats.H1);
+            ctx.strokeStyle = '#28a745';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(x0, y0Bottom);
+            ctx.lineTo(x0, y0Top);
+            ctx.stroke();
+
+            // 先柱（赤の縦線）
+            const x1 = x.getPixelForValue(lastIdx);
+            const y1Bottom = y.getPixelForValue(currentStats.zEnd);
+            const y1Top = y.getPixelForValue(currentStats.H2);
+            ctx.strokeStyle = '#dc3545';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1Bottom);
+            ctx.lineTo(x1, y1Top);
+            ctx.stroke();
+            ctx.restore();
+        }
+    };
+
+    function updateChart() {
+        if (profileSamples.length < 2) return;
+        document.getElementById('empty-guide').style.display = 'none';
+
+        const ctx = document.getElementById('profileChart').getContext('2d');
+        const labels = profileSamples.map(p => `${Math.round(p.dist)}m`);
+        const groundData = profileSamples.map(p => p.groundEle);
+        const reqData = profileSamples.map(p => p.reqEle);
+        const chordData = profileSamples.map(p => p.chordEle);
+        const loadData = profileSamples.map(p => p.loadEle);
+
+        const loadPointColors = profileSamples.map(p => {
+            if (p.status === 'ng') return '#dc3545';
+            if (p.status === 'warn') return '#ff9800';
+            return '#007bff';
+        });
+        const loadPointRadii = profileSamples.map((p, idx) => {
+            if (idx === 0 || idx === profileSamples.length - 1) return 4;
+            if (p.status === 'ng') return 4.5;
+            if (p.status === 'warn') return 3.5;
+            return 0;
+        });
+
+        const allVals = [...groundData, ...reqData, ...chordData, ...loadData];
+        const minY = Math.floor((Math.min(...allVals) - 5) / 5) * 5;
+        const maxY = Math.ceil((Math.max(...allVals) + 5) / 5) * 5;
+
+        if (myChart) myChart.destroy();
+
+        myChart = new Chart(ctx, {
+            type: 'line',
+            plugins: [poleDrawingPlugin],
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '荷重軌跡線（たわみ）',
+                        data: loadData,
+                        borderColor: '#007bff',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: loadPointColors,
+                        pointBorderColor: loadPointColors,
+                        pointRadius: loadPointRadii,
+                        pointHoverRadius: 6,
+                        fill: false,
+                        tension: 0.1
+                    },
+                    {
+                        label: '必要地上高ライン',
+                        data: reqData,
+                        borderColor: '#ff9800',
+                        borderWidth: 1.5,
+                        borderDash: [5, 4],
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        fill: false,
+                        tension: 0.1
+                    },
+                    {
+                        label: '地盤線（地形断面）',
+                        data: groundData,
+                        borderColor: '#795548',
+                        backgroundColor: 'rgba(121, 85, 72, 0.22)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        fill: 'start',
+                        tension: 0.1
+                    },
+                    {
+                        label: '元柱〜先柱 直線',
+                        data: chordData,
+                        borderColor: '#aaaaaa',
+                        borderWidth: 1,
+                        borderDash: [3, 3],
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                layout: { padding: { left: 8, right: 20 } },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { boxWidth: 18, font: { size: 11 }, padding: 8 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => {
+                                const idx = items[0].dataIndex;
+                                const pt = profileSamples[idx];
+                                let suffix = '';
+                                if (idx === 0) suffix = '（元柱）';
+                                else if (idx === profileSamples.length - 1) suffix = '（先柱）';
+                                return `水平距離: ${pt.dist.toFixed(1)}m ${suffix}`;
+                            },
+                            label: () => null,
+                            afterBody: (items) => {
+                                const idx = items[0].dataIndex;
+                                const pt = profileSamples[idx];
+                                const statusLabel = pt.status === 'ng' ? '【❌ 地盤接触】' : (pt.status === 'warn' ? '【⚠️ 地上高不足】' : '【✅ OK】');
+                                return [
+                                    `荷重軌跡高さ: ${pt.loadEle.toFixed(1)} m`,
+                                    `地盤標高: ${pt.groundEle.toFixed(1)} m`,
+                                    `地上高（余裕）: ${pt.clearance.toFixed(1)} m ${statusLabel}`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: '元柱からの水平距離 (m)', font: { size: 11 } },
+                        ticks: { maxTicksLimit: 12, font: { size: 11 } }
+                    },
+                    y: {
+                        min: minY,
+                        max: maxY,
+                        title: { display: true, text: '標高 (m)', font: { size: 11 } },
+                        ticks: { font: { size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- 8. KML保存・読込（Google Earth 3D立体表示対応） ---
+    function saveKML() {
+        if (!startPoint || !endPoint || profileSamples.length < 2) {
+            alert('保存する架線データがありません。元柱と先柱を設置してください。');
+            return;
+        }
+
+        const params = getParams();
+        const s = currentStats;
+        const polyCoords = computeYardingPolygon(startPoint, endPoint, params.sideWidth);
+        const sagPercent = (params.sagRatio * 100).toFixed(1);
+
+        let kml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        kml += '<kml xmlns="http://www.opengis.net/kml/2.2">\n';
+        kml += '  <Document>\n';
+        kml += '    <name>架線計画ルート</name>\n';
+        kml += `    <description>架線計画v0.1 / 水平距離:${s.horizDist.toFixed(0)}m 斜距離:${s.slopeDist.toFixed(0)}m 垂下比:${sagPercent}% 最小地上高:${s.minClearanceVal.toFixed(1)}m</description>\n`;
+
+        // 再読込用メタデータ
+        kml += '    <ExtendedData>\n';
+        kml += `      <Data name="poleStartH"><value>${params.poleStartH}</value></Data>\n`;
+        kml += `      <Data name="poleEndH"><value>${params.poleEndH}</value></Data>\n`;
+        kml += `      <Data name="sagRatio"><value>${sagPercent}</value></Data>\n`;
+        kml += `      <Data name="minClearance"><value>${params.minClearance}</value></Data>\n`;
+        kml += `      <Data name="sideWidth"><value>${params.sideWidth}</value></Data>\n`;
+        kml += `      <Data name="startLat"><value>${startPoint.lat}</value></Data>\n`;
+        kml += `      <Data name="startLng"><value>${startPoint.lng}</value></Data>\n`;
+        kml += `      <Data name="endLat"><value>${endPoint.lat}</value></Data>\n`;
+        kml += `      <Data name="endLng"><value>${endPoint.lng}</value></Data>\n`;
+        kml += '    </ExtendedData>\n';
+
+        // スタイル定義（KML色順は aabbggrr）
+        kml += '    <Style id="skylineStyle"><LineStyle><color>ff00ffff</color><width>4</width></LineStyle></Style>\n';
+        kml += '    <Style id="poleStartStyle"><LineStyle><color>ff00dd00</color><width>5</width></LineStyle></Style>\n';
+        kml += '    <Style id="poleEndStyle"><LineStyle><color>ff0000ee</color><width>5</width></LineStyle></Style>\n';
+        kml += '    <Style id="yardingStyle"><LineStyle><color>ffb8a217</color><width>2</width></LineStyle><PolyStyle><color>40ffff00</color></PolyStyle></Style>\n';
+
+        // 1) 主索（たわみ曲線 3D空間表示）
+        kml += '    <Placemark>\n';
+        kml += '      <name>架線（荷重軌跡3D）</name>\n';
+        kml += `      <description>水平距離: ${s.horizDist.toFixed(1)}m / 斜距離: ${s.slopeDist.toFixed(1)}m / 傾斜角: ${s.slopeDeg.toFixed(1)}° / 最小地上高: ${s.minClearanceVal.toFixed(1)}m</description>\n`;
+        kml += '      <styleUrl>#skylineStyle</styleUrl>\n';
+        kml += '      <LineString>\n';
+        kml += '        <altitudeMode>absolute</altitudeMode>\n';
+        kml += '        <coordinates>\n';
+        profileSamples.forEach(p => {
+            kml += `          ${p.lng.toFixed(6)},${p.lat.toFixed(6)},${p.loadEle.toFixed(2)}\n`;
+        });
+        kml += '        </coordinates>\n';
+        kml += '      </LineString>\n';
+        kml += '    </Placemark>\n';
+
+        // 2) 元柱（3D垂直ライン＋頂点ピン）
+        kml += '    <Placemark>\n';
+        kml += `      <name>元柱 (柱高${params.poleStartH}m)</name>\n`;
+        kml += `      <description>地盤標高: ${s.zStart.toFixed(1)}m / 架設高: ${s.H1.toFixed(1)}m</description>\n`;
+        kml += '      <styleUrl>#poleStartStyle</styleUrl>\n';
+        kml += '      <LineString>\n';
+        kml += '        <altitudeMode>absolute</altitudeMode>\n';
+        kml += `        <coordinates>${startPoint.lng.toFixed(6)},${startPoint.lat.toFixed(6)},${s.zStart.toFixed(2)} ${startPoint.lng.toFixed(6)},${startPoint.lat.toFixed(6)},${s.H1.toFixed(2)}</coordinates>\n`;
+        kml += '      </LineString>\n';
+        kml += '    </Placemark>\n';
+
+        kml += '    <Placemark>\n';
+        kml += '      <name>元柱</name>\n';
+        kml += `      <description>地盤標高: ${s.zStart.toFixed(1)}m / 柱高: ${params.poleStartH}m</description>\n`;
+        kml += '      <Point>\n';
+        kml += '        <altitudeMode>absolute</altitudeMode>\n';
+        kml += `        <coordinates>${startPoint.lng.toFixed(6)},${startPoint.lat.toFixed(6)},${s.H1.toFixed(2)}</coordinates>\n`;
+        kml += '      </Point>\n';
+        kml += '    </Placemark>\n';
+
+        // 3) 先柱（3D垂直ライン＋頂点ピン）
+        kml += '    <Placemark>\n';
+        kml += `      <name>先柱 (柱高${params.poleEndH}m)</name>\n`;
+        kml += `      <description>地盤標高: ${s.zEnd.toFixed(1)}m / 架設高: ${s.H2.toFixed(1)}m</description>\n`;
+        kml += '      <styleUrl>#poleEndStyle</styleUrl>\n';
+        kml += '      <LineString>\n';
+        kml += '        <altitudeMode>absolute</altitudeMode>\n';
+        kml += `        <coordinates>${endPoint.lng.toFixed(6)},${endPoint.lat.toFixed(6)},${s.zEnd.toFixed(2)} ${endPoint.lng.toFixed(6)},${endPoint.lat.toFixed(6)},${s.H2.toFixed(2)}</coordinates>\n`;
+        kml += '      </LineString>\n';
+        kml += '    </Placemark>\n';
+
+        kml += '    <Placemark>\n';
+        kml += '      <name>先柱</name>\n';
+        kml += `      <description>地盤標高: ${s.zEnd.toFixed(1)}m / 柱高: ${params.poleEndH}m</description>\n`;
+        kml += '      <Point>\n';
+        kml += '        <altitudeMode>absolute</altitudeMode>\n';
+        kml += `        <coordinates>${endPoint.lng.toFixed(6)},${endPoint.lat.toFixed(6)},${s.H2.toFixed(2)}</coordinates>\n`;
+        kml += '      </Point>\n';
+        kml += '    </Placemark>\n';
+
+        // 4) 横取り集材範囲ポリゴン（地表貼り付け）
+        if (polyCoords) {
+            kml += '    <Placemark>\n';
+            kml += `      <name>横取り範囲（片側${params.sideWidth}m）</name>\n`;
+            kml += '      <styleUrl>#yardingStyle</styleUrl>\n';
+            kml += '      <Polygon>\n';
+            kml += '        <tessellate>1</tessellate>\n';
+            kml += '        <altitudeMode>clampToGround</altitudeMode>\n';
+            kml += '        <outerBoundaryIs><LinearRing><coordinates>\n';
+            polyCoords.forEach(pt => {
+                kml += `          ${pt[1].toFixed(6)},${pt[0].toFixed(6)},0\n`;
+            });
+            kml += `          ${polyCoords[0][1].toFixed(6)},${polyCoords[0][0].toFixed(6)},0\n`;
+            kml += '        </coordinates></LinearRing></outerBoundaryIs>\n';
+            kml += '      </Polygon>\n';
+            kml += '    </Placemark>\n';
+        }
+
+        kml += '  </Document>\n';
+        kml += '</kml>';
+
+        const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'skyline_plan.kml';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+
+    function loadKML(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(e.target.result, 'text/xml');
+
+                // まずExtendedDataからの完全復元を試みる
+                const dataNodes = xmlDoc.getElementsByTagName('Data');
+                const meta = {};
+                for (let i = 0; i < dataNodes.length; i++) {
+                    const name = dataNodes[i].getAttribute('name');
+                    const valEl = dataNodes[i].getElementsByTagName('value')[0];
+                    if (name && valEl) meta[name] = valEl.textContent.trim();
+                }
+
+                if (meta.poleStartH) document.getElementById('poleStartH').value = meta.poleStartH;
+                if (meta.poleEndH) document.getElementById('poleEndH').value = meta.poleEndH;
+                if (meta.sagRatio) document.getElementById('sagRatio').value = meta.sagRatio;
+                if (meta.minClearance) document.getElementById('minClearance').value = meta.minClearance;
+                if (meta.sideWidth) document.getElementById('sideWidth').value = meta.sideWidth;
+
+                if (meta.startLat && meta.startLng && meta.endLat && meta.endLng) {
+                    startPoint = { lat: parseFloat(meta.startLat), lng: parseFloat(meta.startLng) };
+                    endPoint = { lat: parseFloat(meta.endLat), lng: parseFloat(meta.endLng) };
+                } else {
+                    // 外部作成のKMLでも先頭LineStringの始点・終点から読み込み
+                    const lineStrings = xmlDoc.getElementsByTagName('LineString');
+                    if (lineStrings.length === 0) {
+                        alert('KMLファイルから架線ライン（LineString）を見つけられませんでした。');
+                        return;
+                    }
+                    const coordsText = lineStrings[0].getElementsByTagName('coordinates')[0].textContent;
+                    const coordPairs = coordsText.trim().split(/\s+/);
+                    if (coordPairs.length < 2) {
+                        alert('座標点が2点未満のため読み込めません。');
+                        return;
+                    }
+                    const first = coordPairs[0].split(',');
+                    const last = coordPairs[coordPairs.length - 1].split(',');
+                    startPoint = { lat: parseFloat(first[1]), lng: parseFloat(first[0]) };
+                    endPoint = { lat: parseFloat(last[1]), lng: parseFloat(last[0]) };
+                }
+
+                await analyzeSkyline();
+                map.fitBounds(L.latLngBounds([
+                    [startPoint.lat, startPoint.lng],
+                    [endPoint.lat, endPoint.lng]
+                ]), { padding: [80, 80] });
+
+            } catch (err) {
+                console.error(err);
+                alert('KMLファイルの読み込みに失敗しました。');
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // --- 9. 5m標高色分け機能（ON/OFFトグル） ---
+    async function toggleElevationLayer() {
+        const btn = document.getElementById('btnElevation');
+        const loading = document.getElementById('loading');
+
+        if (elevationOverlay) {
+            map.removeLayer(elevationOverlay);
+            elevationOverlay = null;
+            btn.textContent = '🗺️ 5m標高';
+            btn.classList.remove('elev-active');
+            return;
+        }
+
+        loading.style.display = 'inline';
+        loading.textContent = '色分けデータ生成中...';
+        btn.disabled = true;
+
+        try {
+            const bounds = frameLayer.getBounds();
+            const z = 15;
+            const topLeft = map.project(bounds.getNorthWest(), z);
+            const bottomRight = map.project(bounds.getSouthEast(), z);
+
+            const minTileX = Math.floor(topLeft.x / 256);
+            const minTileY = Math.floor(topLeft.y / 256);
+            const maxTileX = Math.floor(bottomRight.x / 256);
+            const maxTileY = Math.floor(bottomRight.y / 256);
+
+            const tw = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = (maxTileX - minTileX + 1) * tw;
+            canvas.height = (maxTileY - minTileY + 1) * tw;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+            const fetchDemTile = (x, y, z) => {
+                return new Promise((resolve) => {
+                    const types = ['dem5a_png', 'dem5b_png', 'dem5c_png'];
+                    let idx = 0;
+                    const tryNext = () => {
+                        if (idx >= types.length) { resolve(null); return; }
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.src = `https://cyberjapandata.gsi.go.jp/xyz/${types[idx]}/${z}/${x}/${y}.png`;
+                        img.onload = () => resolve(img);
+                        img.onerror = () => { idx++; tryNext(); };
+                    };
+                    tryNext();
+                });
+            };
+
+            const promises = [];
+            for (let x = minTileX; x <= maxTileX; x++) {
+                for (let y = minTileY; y <= maxTileY; y++) {
+                    promises.push(fetchDemTile(x, y, z).then(img => {
+                        if (img) ctx.drawImage(img, (x - minTileX) * tw, (y - minTileY) * tw);
+                    }));
+                }
+            }
+            await Promise.all(promises);
+
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            const outData = ctx.createImageData(canvas.width, canvas.height);
+
+            const getZ = (i) => {
+                const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+                if (a === 0 || (r === 128 && g === 0 && b === 0) || (r === 0 && g === 0 && b === 0)) return null;
+                const v = (r << 16) + (g << 8) + b;
+                return (v < 8388608) ? v * 0.01 : (v - 16777216) * 0.01;
+            };
+
+            const colors = [
+                [0, 0, 128], [0, 0, 255], [0, 128, 255], [0, 255, 255], [128, 255, 128],
+                [0, 255, 0], [128, 255, 0], [255, 255, 0], [255, 128, 0], [255, 0, 0],
+                [128, 0, 0], [255, 0, 255], [128, 0, 128], [255, 128, 255], [128, 128, 255],
+                [0, 128, 128], [128, 128, 0], [128, 128, 128], [192, 192, 192], [255, 255, 255]
+            ];
+
+            const w = canvas.width;
+            for (let py = 0; py < canvas.height; py++) {
+                for (let px = 0; px < w; px++) {
+                    const idx = (py * w + px) * 4;
+                    const zC = getZ(idx);
+                    if (zC === null) { outData.data[idx + 3] = 0; continue; }
+                    const c = colors[Math.floor(zC / 5) % colors.length];
+                    outData.data[idx] = c[0];
+                    outData.data[idx + 1] = c[1];
+                    outData.data[idx + 2] = c[2];
+                    outData.data[idx + 3] = 128;
+                }
+            }
+            ctx.putImageData(outData, 0, 0);
+
+            const pxWest = Math.round(topLeft.x - minTileX * 256);
+            const pxNorth = Math.round(topLeft.y - minTileY * 256);
+            const cropW = Math.round(bottomRight.x - topLeft.x);
+            const cropH = Math.round(bottomRight.y - topLeft.y);
+
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = cropW;
+            cropCanvas.height = cropH;
+            cropCanvas.getContext('2d').drawImage(canvas, pxWest, pxNorth, cropW, cropH, 0, 0, cropW, cropH);
+
+            elevationOverlay = L.imageOverlay(cropCanvas.toDataURL('image/png'), bounds, { opacity: 0.7 }).addTo(map);
+            btn.textContent = '🗺️ 標高戻す';
+            btn.classList.add('elev-active');
+
+        } catch (error) {
+            console.error('色分けエラー:', error);
+            alert('標高色分けの作成に失敗しました。\n' + error.message);
+        } finally {
+            loading.style.display = 'none';
+            loading.textContent = '処理中...';
+            btn.disabled = false;
+        }
+    }
+
+    // --- 10. A4横高精細切出（林小班図アプリ連携用 Exif付） ---
+    async function exportA4() {
+        const btnExport = document.getElementById('btnExport');
+        const loading = document.getElementById('loading');
+
+        try {
+            loading.style.display = 'inline';
+            loading.textContent = 'A4画像生成中...';
+            btnExport.disabled = true;
+
+            const bounds = frameLayer.getBounds();
+            const z = 17;
+            const topLeft = map.project(bounds.getNorthWest(), z);
+            const bottomRight = map.project(bounds.getSouthEast(), z);
+
+            const minTileX = Math.floor(topLeft.x / 256);
+            const minTileY = Math.floor(topLeft.y / 256);
+            const maxTileX = Math.floor(bottomRight.x / 256);
+            const maxTileY = Math.floor(bottomRight.y / 256);
+
+            const tw = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = (maxTileX - minTileX + 1) * tw;
+            canvas.height = (maxTileY - minTileY + 1) * tw;
+            const ctx = canvas.getContext('2d');
+
+            // 現在表示中のベースマップに合わせてタイル取得（オルソ表示中ならオルソ、標準なら標準）
+            const isOrtho = map.hasLayer(orthoMap);
+            const promises = [];
+            for (let x = minTileX; x <= maxTileX; x++) {
+                for (let y = minTileY; y <= maxTileY; y++) {
+                    promises.push(new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.src = isOrtho
+                            ? `https://cyberjapandata.gsi.go.jp/xyz/ort/${z}/${x}/${y}.jpg`
+                            : `https://cyberjapandata.gsi.go.jp/xyz/std/${z}/${x}/${y}.png`;
+                        img.onload = () => {
+                            ctx.drawImage(img, (x - minTileX) * tw, (y - minTileY) * tw);
+                            resolve();
+                        };
+                        img.onerror = resolve;
+                    }));
+                }
+            }
+            await Promise.all(promises);
+
+            // 5m標高色分けがONの場合は合成
+            if (elevationOverlay) {
+                const overlayImg = new Image();
+                overlayImg.crossOrigin = 'anonymous';
+                overlayImg.src = elevationOverlay._url;
+                const ovBounds = elevationOverlay.getBounds();
+                const ovTL = map.project(ovBounds.getNorthWest(), z);
+                const ovBR = map.project(ovBounds.getSouthEast(), z);
+                await new Promise((resolve) => {
+                    overlayImg.onload = () => {
+                        ctx.globalAlpha = 0.7;
+                        ctx.drawImage(overlayImg, ovTL.x - minTileX * tw, ovTL.y - minTileY * tw, ovBR.x - ovTL.x, ovBR.y - ovTL.y);
+                        ctx.globalAlpha = 1.0;
+                        resolve();
+                    };
+                    overlayImg.onerror = resolve;
+                });
+            }
+
+            // 架線・横取り範囲・干渉区間・元柱/先柱の描画
+            if (startPoint && endPoint) {
+                const params = getParams();
+                const polyCoords = computeYardingPolygon(startPoint, endPoint, params.sideWidth);
+                if (polyCoords) {
+                    ctx.beginPath();
+                    polyCoords.forEach((ll, idx) => {
+                        const pt = map.project(ll, z);
+                        const cx = pt.x - minTileX * tw;
+                        const cy = pt.y - minTileY * tw;
+                        if (idx === 0) ctx.moveTo(cx, cy);
+                        else ctx.lineTo(cx, cy);
+                    });
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(23, 162, 184, 0.18)';
+                    ctx.fill();
+                    ctx.strokeStyle = '#17a2b8';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([6, 6]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // 基本架線ライン
+                const p1 = map.project([startPoint.lat, startPoint.lng], z);
+                const p2 = map.project([endPoint.lat, endPoint.lng], z);
+                ctx.beginPath();
+                ctx.strokeStyle = '#007bff';
+                ctx.lineWidth = 4;
+                ctx.moveTo(p1.x - minTileX * tw, p1.y - minTileY * tw);
+                ctx.lineTo(p2.x - minTileX * tw, p2.y - minTileY * tw);
+                ctx.stroke();
+
+                // 干渉区間ハイライト
+                for (let i = 0; i < profileSamples.length - 1; i++) {
+                    const pA = profileSamples[i];
+                    const pB = profileSamples[i + 1];
+                    const isNg = (pA.status === 'ng' || pB.status === 'ng');
+                    const isWarn = (!isNg && (pA.status === 'warn' || pB.status === 'warn'));
+                    if (isNg || isWarn) {
+                        const ptA = map.project([pA.lat, pA.lng], z);
+                        const ptB = map.project([pB.lat, pB.lng], z);
+                        ctx.beginPath();
+                        ctx.strokeStyle = isNg ? '#dc3545' : '#ff9800';
+                        ctx.lineWidth = isNg ? 8 : 6;
+                        ctx.moveTo(ptA.x - minTileX * tw, ptA.y - minTileY * tw);
+                        ctx.lineTo(ptB.x - minTileX * tw, ptB.y - minTileY * tw);
+                        ctx.stroke();
+                    }
+                }
+
+                // 元柱・先柱マーカー
+                const drawPole = (pt, color, label) => {
+                    const cx = pt.x - minTileX * tw;
+                    const cy = pt.y - minTileY * tw;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    ctx.lineWidth = 2.5;
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.stroke();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(label, cx, cy);
+                };
+                drawPole(p1, '#28a745', '元');
+                drawPole(p2, '#dc3545', '先');
+            }
+
+            // A4枠でクロップ
+            const pxWest = Math.round(topLeft.x - minTileX * tw);
+            const pxNorth = Math.round(topLeft.y - minTileY * tw);
+            const cropW = Math.round(bottomRight.x - topLeft.x);
+            const cropH = Math.round(bottomRight.y - topLeft.y);
+
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = cropW;
+            cropCanvas.height = cropH;
+            const cropCtx = cropCanvas.getContext('2d');
+            cropCtx.fillStyle = '#ffffff';
+            cropCtx.fillRect(0, 0, cropW, cropH);
+            cropCtx.drawImage(canvas, pxWest, pxNorth, cropW, cropH, 0, 0, cropW, cropH);
+
+            const exportDataUrl = cropCanvas.toDataURL('image/jpeg', 0.92);
+
+            // Exif位置情報埋め込み（林小班図アプリ互換）
+            const s = bounds.getSouth().toFixed(6);
+            const w = bounds.getWest().toFixed(6);
+            const n = bounds.getNorth().toFixed(6);
+            const e = bounds.getEast().toFixed(6);
+
+            const zeroth = {};
+            zeroth[piexif.ImageIFD.ImageDescription] = `${s},${w},${n},${e}`;
+            const exifBytes = piexif.dump({ "0th": zeroth, "Exif": {}, "GPS": {} });
+
+            const newDataUrl = piexif.insert(exifBytes, exportDataUrl);
+            const filename = `skyline-plan_${s}_${w}_${n}_${e}.jpg`;
+
+            const arr = newDataUrl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let len = bstr.length;
+            const u8arr = new Uint8Array(len);
+            while (len--) u8arr[len] = bstr.charCodeAt(len);
+            const blob = new Blob([u8arr], { type: mime });
+
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = blobUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+
+        } catch (error) {
+            console.error('生成エラー:', error);
+            alert('画像の作成に失敗しました。\n' + error.message);
+        } finally {
+            loading.style.display = 'none';
+            loading.textContent = '処理中...';
+            btnExport.disabled = false;
+        }
+    }
+
+    // --- ユーティリティ ---
+    function changePref() {
+        const val = document.getElementById('prefSelect').value.split(',');
+        map.setView([parseFloat(val[0]), parseFloat(val[1])], 14);
+    }
+    function jumpToCoordinates() {
+        const inputVal = document.getElementById('latLonInput').value.replace(/,/g, ' ').trim().split(/\s+/);
+        if (inputVal.length >= 2) map.setView([parseFloat(inputVal[0]), parseFloat(inputVal[1])], 15);
+    }
+</script>
+</body>
+</html>
