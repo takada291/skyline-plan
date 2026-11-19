@@ -18,44 +18,46 @@
     <style>
         body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; overflow: hidden; }
 
-        #controls { padding: 8px 10px; background: #f8f9fa; display: flex; gap: 7px; align-items: center; z-index: 1000; border-bottom: 1px solid #ccc; flex-wrap: wrap; font-size: 13px; }
-        .ctrl-group { display: inline-flex; align-items: center; gap: 5px; }
+        #controls { padding: 7px 10px; background: #f8f9fa; display: flex; gap: 6px; align-items: center; z-index: 1000; border-bottom: 1px solid #ccc; flex-wrap: wrap; font-size: 13px; }
+        .ctrl-group { display: inline-flex; align-items: center; gap: 4px; }
         .divider { color: #bbb; user-select: none; }
 
         #main-container { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
         #map { flex-grow: 1; width: 100%; min-height: 45%; cursor: grab; }
 
         #chart-container {
-            height: 260px; width: 100%; background: #fff; border-top: 2px solid #ccc; box-sizing: border-box; padding: 8px 12px; display: flex; flex-direction: column; flex-shrink: 0;
+            height: 265px; width: 100%; background: #fff; border-top: 2px solid #ccc; box-sizing: border-box; padding: 8px 12px; display: flex; flex-direction: column; flex-shrink: 0;
         }
         #chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-weight: bold; font-size: 13px; color: #333; flex-wrap: wrap; gap: 8px; }
-        #stats-area { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-weight: normal; font-size: 12.5px; color: #222; }
+        #stats-area { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-weight: normal; font-size: 12.5px; color: #222; }
         .stat-item strong { color: #0056b3; }
         .badge-ok { background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #c3e6cb; }
         .badge-warn { background: #fff3cd; color: #856404; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #ffeeba; }
         .badge-ng { background: #f8d7da; color: #721c24; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #f5c6cb; }
         #chart-note { font-size: 11px; color: #777; text-align: right; margin-top: 2px; }
 
-        button { padding: 5px 10px; font-size: 12.5px; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; white-space: nowrap; }
+        button { padding: 5px 9px; font-size: 12.5px; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; white-space: nowrap; }
         .btn-blue { background-color: #007bff; } .btn-blue:hover { background-color: #0056b3; }
         .btn-green { background-color: #28a745; } .btn-green:hover { background-color: #218838; }
         .btn-red { background-color: #dc3545; } .btn-red:hover { background-color: #c82333; }
         .btn-gray { background-color: #6c757d; } .btn-gray:hover { background-color: #5a6268; }
         .btn-orange { background-color: #ff9800; } .btn-orange:hover { background-color: #e68a00; }
         .btn-purple { background-color: #9c27b0; } .btn-purple:hover { background-color: #7b1fa2; }
+        .btn-indigo { background-color: #6f42c1; } .btn-indigo:hover { background-color: #59339d; }
         .btn-teal { background-color: #20c997; } .btn-teal:hover { background-color: #1aa179; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        select, input[type="text"], input[type="number"] { padding: 4px 6px; font-size: 12.5px; border: 1px solid #ccc; border-radius: 4px; }
-        input[type="number"] { width: 46px; text-align: right; }
+        select, input[type="text"], input[type="number"] { padding: 4px 5px; font-size: 12.5px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="number"] { width: 42px; text-align: right; }
 
         .mode-active { border: 2px solid #8b0000; box-shadow: 0 0 8px rgba(211,47,47,0.8); background-color: #b71c1c; }
+        .mid-active { border: 2px solid #3c1e70; box-shadow: 0 0 8px rgba(111,66,193,0.8); background-color: #4c2889; }
         .elev-active { border: 2px solid #4a148c; box-shadow: 0 0 8px rgba(156,39,176,0.8); background-color: #6a1b9a; }
 
         #loading { display: none; font-weight: bold; color: #d32f2f; font-size: 13px; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.5; } }
 
-        /* 元柱・先柱マーカーのスタイル */
+        /* 元柱・中間柱・先柱マーカーのスタイル */
         .pole-marker {
             width: 24px; height: 24px; border-radius: 50%; border: 2px solid #ffffff;
             color: #ffffff; font-weight: bold; font-size: 12px;
@@ -64,6 +66,7 @@
             cursor: move;
         }
         .pole-start { background-color: #28a745; }
+        .pole-mid { background-color: #6f42c1; }
         .pole-end { background-color: #dc3545; }
 
         #empty-guide {
@@ -75,7 +78,7 @@
 <body>
 
 <div id="controls">
-    <span style="font-weight: bold; color: #333; font-size: 14px;">架線計画v0.1</span>
+    <span style="font-weight: bold; color: #333; font-size: 14px;">架線計画v0.2</span>
 
     <select id="prefSelect" onchange="changePref()">
         <option value="43.064,141.347">北海道</option>
@@ -128,24 +131,26 @@
     </select>
 
     <div class="ctrl-group">
-        <input type="text" id="latLonInput" placeholder="緯度, 経度" style="width: 110px;">
+        <input type="text" id="latLonInput" placeholder="緯度, 経度" style="width: 105px;">
         <button class="btn-gray" onclick="jumpToCoordinates()">移動</button>
     </div>
 
     <span class="divider">|</span>
 
     <div class="ctrl-group">
-        <label>元柱高:<input type="number" id="poleStartH" value="10" min="1" max="50" step="1" oninput="recomputeFromParams()">m</label>
-        <label>先柱高:<input type="number" id="poleEndH" value="10" min="1" max="50" step="1" oninput="recomputeFromParams()">m</label>
+        <label>元柱:<input type="number" id="poleStartH" value="10" min="1" max="50" step="1" oninput="recomputeFromParams()">m</label>
+        <label>中間:<input type="number" id="poleMidH" value="10" min="1" max="50" step="1" oninput="recomputeFromParams()">m</label>
+        <label>先柱:<input type="number" id="poleEndH" value="10" min="1" max="50" step="1" oninput="recomputeFromParams()">m</label>
         <label>垂下比:<input type="number" id="sagRatio" value="6" min="1" max="15" step="0.5" oninput="recomputeFromParams()">%</label>
         <label>地上高:<input type="number" id="minClearance" value="8" min="0" max="50" step="1" oninput="recomputeFromParams()">m</label>
-        <label>横取(片側):<input type="number" id="sideWidth" value="30" min="0" max="150" step="5" oninput="recomputeFromParams()">m</label>
+        <label>横取:<input type="number" id="sideWidth" value="30" min="0" max="150" step="5" oninput="recomputeFromParams()">m</label>
     </div>
 
     <span class="divider">|</span>
 
     <div class="ctrl-group">
         <button class="btn-red" id="btnPlace" onclick="togglePlaceMode()">🖍️ 設置</button>
+        <button class="btn-indigo" id="btnMidPole" onclick="toggleMidPole()" title="中間サポートを追加／解除（追加後はドラッグで位置調整可）">📍 中間柱</button>
         <button class="btn-orange" onclick="swapPoles()" title="元柱と先柱を入れ替え">⇄ 入替</button>
         <button class="btn-gray" onclick="clearSkyline()">🗑️ 消去</button>
     </div>
@@ -182,7 +187,7 @@
             <div id="empty-guide">「🖍️ 設置」ボタンを押し、地図上で 1点目（元柱：緑）→ 2点目（先柱：赤）の順にクリックしてください。</div>
             <canvas id="profileChart"></canvas>
         </div>
-        <div id="chart-note">※放物線近似（中央垂下比）と地理院DEMによる簡易検証です。実際の架設時は作業主任者による強度計算と現地踏査を行ってください。</div>
+        <div id="chart-note">※放物線近似（各径間の中央垂下比）と地理院DEMによる簡易検証です。中間柱はドラッグで架線上の位置を調整できます。</div>
     </div>
 </div>
 
@@ -225,29 +230,91 @@
     // --- 2. 状態管理 ---
     let isPlaceMode = false;
     let isFetching = false;
-    let startPoint = null; // { lat, lng } 元柱
-    let endPoint = null;   // { lat, lng } 先柱
-    let profileSamples = []; // [{ t, dist, lat, lng, groundEle, chordEle, loadEle, reqEle, clearance, status }]
+    let startPoint = null;  // { lat, lng } 元柱
+    let endPoint = null;    // { lat, lng } 先柱
+    let hasMidPole = false; // 中間柱の有無
+    let midRatio = 0.5;     // 元柱→先柱上の位置比率 (0.05〜0.95)
+    let midPoint = null;    // { lat, lng } 中間柱座標
+    let midGroundEleOverride = null; // 中間柱ドラッグ完了時にDEM直接取得した正確な標高
+
+    let baseProfile = [];    // DEM取得済みの元柱〜先柱の地盤サンプル [{ t, dist, lat, lng, groundEle }]
+    let profileSamples = []; // 中間柱点を含む計算済みサンプル
     let currentStats = null;
 
     let startMarker = null;
+    let midMarker = null;
     let endMarker = null;
     const skylineLayerGroup = L.layerGroup().addTo(map);
     let elevationOverlay = null;
     let myChart = null;
 
-    // DEMタイルキャッシュ（高速な断面再計算用）
+    // DEMタイルキャッシュ
     const demTileCache = new Map();
     const demPromiseCache = new Map();
 
     function getParams() {
         return {
             poleStartH: Math.max(0, parseFloat(document.getElementById('poleStartH').value) || 0),
+            poleMidH: Math.max(0, parseFloat(document.getElementById('poleMidH').value) || 0),
             poleEndH: Math.max(0, parseFloat(document.getElementById('poleEndH').value) || 0),
             sagRatio: Math.max(0.5, parseFloat(document.getElementById('sagRatio').value) || 6) / 100.0,
             minClearance: Math.max(0, parseFloat(document.getElementById('minClearance').value) || 0),
             sideWidth: Math.max(0, parseFloat(document.getElementById('sideWidth').value) || 0)
         };
+    }
+
+    function updateMidPoleButtonUI() {
+        const btn = document.getElementById('btnMidPole');
+        if (hasMidPole) {
+            btn.textContent = '📍 中間解除';
+            btn.classList.add('mid-active');
+        } else {
+            btn.textContent = '📍 中間柱';
+            btn.classList.remove('mid-active');
+        }
+    }
+
+    function computeMidPointFromRatio() {
+        if (!startPoint || !endPoint || !hasMidPole) {
+            midPoint = null;
+            return;
+        }
+        midPoint = {
+            lat: startPoint.lat + (endPoint.lat - startPoint.lat) * midRatio,
+            lng: startPoint.lng + (endPoint.lng - startPoint.lng) * midRatio
+        };
+    }
+
+    // 任意の緯度経度を元柱〜先柱の線分上に射影して比率(0.05〜0.95)を求める
+    function projectLatLngToRatio(latlng) {
+        if (!startPoint || !endPoint) return 0.5;
+        const cosLat = Math.cos(((startPoint.lat + endPoint.lat) / 2) * Math.PI / 180);
+        const ax = (endPoint.lng - startPoint.lng) * cosLat;
+        const ay = (endPoint.lat - startPoint.lat);
+        const bx = (latlng.lng - startPoint.lng) * cosLat;
+        const by = (latlng.lat - startPoint.lat);
+        const lenSq = ax * ax + ay * ay;
+        if (lenSq < 1e-12) return 0.5;
+        const t = (ax * bx + ay * by) / lenSq;
+        return Math.max(0.05, Math.min(0.95, t));
+    }
+
+    // baseProfile から任意比率 t の地盤標高を線形補間（ドラッグ中の高速リアルタイム更新用）
+    function interpolateGroundEle(t) {
+        if (baseProfile.length === 0) return 0;
+        if (t <= baseProfile[0].t) return baseProfile[0].groundEle;
+        const last = baseProfile[baseProfile.length - 1];
+        if (t >= last.t) return last.groundEle;
+        for (let i = 0; i < baseProfile.length - 1; i++) {
+            const a = baseProfile[i];
+            const b = baseProfile[i + 1];
+            if (t >= a.t && t <= b.t) {
+                const span = b.t - a.t;
+                const r = span > 0 ? (t - a.t) / span : 0;
+                return a.groundEle + (b.groundEle - a.groundEle) * r;
+            }
+        }
+        return last.groundEle;
     }
 
     function togglePlaceMode(forceState) {
@@ -262,22 +329,58 @@
         }
     }
 
+    async function toggleMidPole() {
+        if (!startPoint || !endPoint || baseProfile.length < 2) {
+            alert('先に元柱と先柱を設置してください。');
+            return;
+        }
+        if (isFetching) return;
+
+        if (hasMidPole) {
+            // 中間柱を解除して1スパンへ戻す
+            hasMidPole = false;
+            midPoint = null;
+            midGroundEleOverride = null;
+            updateMidPoleButtonUI();
+            recomputeFromParams(false);
+        } else {
+            // 最も地上高が厳しい地点（0.1〜0.9の範囲）を自動探索して中間柱を配置
+            let bestT = 0.5;
+            let minClr = Infinity;
+            profileSamples.forEach(pt => {
+                if (pt.t >= 0.10 && pt.t <= 0.90 && pt.clearance < minClr) {
+                    minClr = pt.clearance;
+                    bestT = pt.t;
+                }
+            });
+            midRatio = (minClr < getParams().minClearance) ? bestT : 0.5;
+            hasMidPole = true;
+            computeMidPointFromRatio();
+            midGroundEleOverride = await getElevation(midPoint.lat, midPoint.lng);
+            updateMidPoleButtonUI();
+            recomputeFromParams(false);
+        }
+    }
+
     map.on('click', async function(e) {
         if (!isPlaceMode || isFetching) return;
 
         if (!startPoint || (startPoint && endPoint)) {
-            // 新規に元柱を設置
             startPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
             endPoint = null;
+            hasMidPole = false;
+            midPoint = null;
+            midGroundEleOverride = null;
+            baseProfile = [];
             profileSamples = [];
             currentStats = null;
+            updateMidPoleButtonUI();
             renderMarkersOnly();
             skylineLayerGroup.clearLayers();
             clearChartWithMessage('元柱（緑）を設置しました。次に先柱（赤）の位置をクリックしてください。');
         } else {
-            // 先柱を設置して断面計算を実行
             endPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
-            togglePlaceMode(false); // 2点揃ったらドラッグ調整しやすいよう設置モード解除
+            togglePlaceMode(false);
             await analyzeSkyline();
         }
     });
@@ -295,6 +398,10 @@
         const tmp = startPoint;
         startPoint = endPoint;
         endPoint = tmp;
+        if (hasMidPole) {
+            midRatio = 1 - midRatio;
+            computeMidPointFromRatio();
+        }
         await analyzeSkyline();
     }
 
@@ -303,9 +410,15 @@
         if (!confirm('設置した架線計画を消去しますか？')) return;
         startPoint = null;
         endPoint = null;
+        hasMidPole = false;
+        midPoint = null;
+        midGroundEleOverride = null;
+        baseProfile = [];
         profileSamples = [];
         currentStats = null;
+        updateMidPoleButtonUI();
         if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+        if (midMarker) { map.removeLayer(midMarker); midMarker = null; }
         if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
         skylineLayerGroup.clearLayers();
         clearChartWithMessage('「🖍️ 設置」ボタンを押し、地図上で 1点目（元柱：緑）→ 2点目（先柱：赤）の順にクリックしてください。');
@@ -366,7 +479,6 @@
     }
 
     async function getElevation(lat, lng) {
-        // まずZoom 15の5mDEM (5A -> 5B -> 5C) を取得
         const z15 = 15;
         const n15 = Math.pow(2, z15);
         const fx15 = (lng + 180) / 360 * n15;
@@ -380,7 +492,6 @@
         const ele15 = decodePixelZ(data15, px15, py15);
         if (ele15 !== null) return ele15;
 
-        // 5mDEM未整備エリアはZoom 14の10mDEM (dem_png) へフォールバック
         const z14 = 14;
         const n14 = Math.pow(2, z14);
         const fx14 = (lng + 180) / 360 * n14;
@@ -408,7 +519,6 @@
         const len = Math.hypot(dx, dy);
         if (len < 1) return null;
 
-        // 架線に直交する単位ベクトル（左右オフセット）
         const nx = (-dy / len) * sideWidthM;
         const ny = (dx / len) * sideWidthM;
 
@@ -423,7 +533,7 @@
         ];
     }
 
-    // --- 5. 架線断面解析・たわみ計算 ---
+    // --- 5. 架線断面解析・たわみ計算（1スパン／中間サポート2スパン両対応） ---
     async function analyzeSkyline() {
         if (!startPoint || !endPoint) return;
         isFetching = true;
@@ -438,7 +548,6 @@
                 return;
             }
 
-            // 約5m〜10mピッチ（30〜100分割）でサンプリング
             const steps = Math.max(30, Math.min(100, Math.ceil(horizDist / 5)));
             const coords = [];
             for (let i = 0; i <= steps; i++) {
@@ -451,14 +560,21 @@
                 });
             }
 
-            // 標高を一括取得（タイルキャッシュにより高速動作）
             const elevations = await Promise.all(coords.map(c => getElevation(c.lat, c.lng)));
-            profileSamples = coords.map((c, idx) => ({
+            baseProfile = coords.map((c, idx) => ({
                 ...c,
                 groundEle: elevations[idx]
             }));
 
-            recomputeFromParams();
+            if (hasMidPole) {
+                computeMidPointFromRatio();
+                midGroundEleOverride = await getElevation(midPoint.lat, midPoint.lng);
+            } else {
+                midPoint = null;
+                midGroundEleOverride = null;
+            }
+
+            recomputeFromParams(false);
         } catch (err) {
             console.error(err);
             alert('断面データの計算に失敗しました。\n' + err.message);
@@ -469,66 +585,140 @@
         }
     }
 
-    // パラメータ変更時はDEM再取得なしで瞬時に再計算・再描画
-    function recomputeFromParams() {
-        if (!startPoint || !endPoint || profileSamples.length < 2) {
-            renderMarkersOnly();
+    // パラメータ変更・中間柱スライド時の再計算（skipMarkerRedraw=trueならドラッグ中マーカーを壊さず高速更新）
+    function recomputeFromParams(skipMarkerRedraw = false) {
+        if (!startPoint || !endPoint || baseProfile.length < 2) {
+            if (!skipMarkerRedraw) renderMarkersOnly();
             return;
         }
 
         const params = getParams();
-        const L = profileSamples[profileSamples.length - 1].dist;
-        const zStart = profileSamples[0].groundEle;
-        const zEnd = profileSamples[profileSamples.length - 1].groundEle;
+        const L = baseProfile[baseProfile.length - 1].dist;
+        const zStart = baseProfile[0].groundEle;
+        const zEnd = baseProfile[baseProfile.length - 1].groundEle;
         const H1 = zStart + params.poleStartH;
         const H2 = zEnd + params.poleEndH;
+
+        // 計算用の点列を組み立て（中間柱あり時は中間柱の正確な位置を挿入）
+        let workingPoints = baseProfile.map(p => ({ ...p, isMid: false }));
+        let midDist = null;
+        let zMid = null;
+        let Hm = null;
+
+        if (hasMidPole) {
+            computeMidPointFromRatio();
+            midDist = L * midRatio;
+            zMid = (midGroundEleOverride !== null) ? midGroundEleOverride : interpolateGroundEle(midRatio);
+            Hm = zMid + params.poleMidH;
+
+            // 既存の近接点と重複しないよう調整して中間点を挿入
+            workingPoints = workingPoints.filter(p => Math.abs(p.t - midRatio) > 0.002);
+            workingPoints.push({
+                t: midRatio,
+                dist: midDist,
+                lat: midPoint.lat,
+                lng: midPoint.lng,
+                groundEle: zMid,
+                isMid: true
+            });
+            workingPoints.sort((a, b) => a.t - b.t);
+        }
 
         let minClearanceVal = Infinity;
         let minClearanceDist = 0;
         let hasGroundHit = false;
         let hasClearanceWarn = false;
+        let maxSagVal = 0;
 
-        profileSamples.forEach(pt => {
-            const t = pt.t;
-            const chordEle = H1 + (H2 - H1) * t;
-            // 中央垂下比 s に基づく放物線近似（荷重軌跡線）
-            const sag = 4 * params.sagRatio * L * t * (1 - t);
-            const loadEle = chordEle - sag;
-            const clearance = loadEle - pt.groundEle;
-            const reqEle = pt.groundEle + params.minClearance;
+        if (!hasMidPole) {
+            // --- 1スパン計算 ---
+            maxSagVal = params.sagRatio * L;
+            workingPoints.forEach(pt => {
+                const t = pt.t;
+                const chordEle = H1 + (H2 - H1) * t;
+                const sag = 4 * params.sagRatio * L * t * (1 - t);
+                const loadEle = chordEle - sag;
+                const clearance = loadEle - pt.groundEle;
+                const reqEle = pt.groundEle + params.minClearance;
 
-            let status = 'ok';
-            if (clearance < 0) {
-                status = 'ng';
-                hasGroundHit = true;
-            } else if (clearance < params.minClearance) {
-                status = 'warn';
-                hasClearanceWarn = true;
-            }
+                let status = 'ok';
+                if (clearance < 0) { status = 'ng'; hasGroundHit = true; }
+                else if (clearance < params.minClearance) { status = 'warn'; hasClearanceWarn = true; }
 
-            if (clearance < minClearanceVal) {
-                minClearanceVal = clearance;
-                minClearanceDist = pt.dist;
-            }
+                if (clearance < minClearanceVal) {
+                    minClearanceVal = clearance;
+                    minClearanceDist = pt.dist;
+                }
 
-            pt.chordEle = chordEle;
-            pt.loadEle = loadEle;
-            pt.reqEle = reqEle;
-            pt.clearance = clearance;
-            pt.status = status;
-        });
+                pt.chordEle = chordEle;
+                pt.loadEle = loadEle;
+                pt.reqEle = reqEle;
+                pt.clearance = clearance;
+                pt.status = status;
+                pt.spanIndex = 1;
+            });
+        } else {
+            // --- 2スパン（中間サポートあり）計算 ---
+            const L1 = midDist;
+            const L2 = L - midDist;
+            maxSagVal = Math.max(params.sagRatio * L1, params.sagRatio * L2);
+
+            workingPoints.forEach(pt => {
+                let chordEle, sag, spanIndex;
+                if (pt.t <= midRatio) {
+                    const u = (midRatio > 0) ? (pt.t / midRatio) : 0;
+                    chordEle = H1 + (Hm - H1) * u;
+                    sag = 4 * params.sagRatio * L1 * u * (1 - u);
+                    spanIndex = 1;
+                } else {
+                    const v = (1 - midRatio > 0) ? ((pt.t - midRatio) / (1 - midRatio)) : 0;
+                    chordEle = Hm + (H2 - Hm) * v;
+                    sag = 4 * params.sagRatio * L2 * v * (1 - v);
+                    spanIndex = 2;
+                }
+                const loadEle = chordEle - sag;
+                const clearance = loadEle - pt.groundEle;
+                const reqEle = pt.groundEle + params.minClearance;
+
+                let status = 'ok';
+                if (clearance < 0) { status = 'ng'; hasGroundHit = true; }
+                else if (clearance < params.minClearance) { status = 'warn'; hasClearanceWarn = true; }
+
+                if (clearance < minClearanceVal) {
+                    minClearanceVal = clearance;
+                    minClearanceDist = pt.dist;
+                }
+
+                pt.chordEle = chordEle;
+                pt.loadEle = loadEle;
+                pt.reqEle = reqEle;
+                pt.clearance = clearance;
+                pt.status = status;
+                pt.spanIndex = spanIndex;
+            });
+        }
+
+        profileSamples = workingPoints;
 
         const diffH = H2 - H1;
-        const slopeDist = Math.hypot(L, diffH);
+        const slopeDist = !hasMidPole
+            ? Math.hypot(L, diffH)
+            : Math.hypot(midDist, Hm - H1) + Math.hypot(L - midDist, H2 - Hm);
         const slopeDeg = Math.atan2(Math.abs(diffH), L) * (180 / Math.PI);
-        const maxSag = params.sagRatio * L;
+
+        // 中間柱が元柱〜先柱の直線より低い場合（浮き上がり注意の目安）
+        let midUpliftCaution = false;
+        if (hasMidPole) {
+            const directLineAtMid = H1 + (H2 - H1) * midRatio;
+            if (Hm < directLineAtMid - 1.0) midUpliftCaution = true;
+        }
 
         currentStats = {
             horizDist: L,
             slopeDist: slopeDist,
             diffH: diffH,
             slopeDeg: slopeDeg,
-            maxSag: maxSag,
+            maxSag: maxSagVal,
             minClearanceVal: minClearanceVal,
             minClearanceDist: minClearanceDist,
             hasGroundHit: hasGroundHit,
@@ -536,10 +726,17 @@
             zStart: zStart,
             zEnd: zEnd,
             H1: H1,
-            H2: H2
+            H2: H2,
+            hasMidPole: hasMidPole,
+            midDist: midDist,
+            L1: hasMidPole ? midDist : L,
+            L2: hasMidPole ? (L - midDist) : 0,
+            zMid: zMid,
+            Hm: Hm,
+            midUpliftCaution: midUpliftCaution
         };
 
-        renderMarkersOnly();
+        if (!skipMarkerRedraw) renderMarkersOnly();
         renderSkylineOverlays();
         updateHeaderStats();
         updateChart();
@@ -548,6 +745,7 @@
     // --- 6. マップ描画（マーカー・架線ライン・横取り範囲） ---
     function renderMarkersOnly() {
         if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+        if (midMarker) { map.removeLayer(midMarker); midMarker = null; }
         if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
 
         if (startPoint) {
@@ -559,12 +757,39 @@
             startMarker.on('drag', (e) => {
                 const pos = e.target.getLatLng();
                 startPoint = { lat: pos.lat, lng: pos.lng };
+                if (hasMidPole) {
+                    computeMidPointFromRatio();
+                    if (midMarker && midPoint) midMarker.setLatLng([midPoint.lat, midPoint.lng]);
+                }
                 renderQuickPreviewLine();
             });
             startMarker.on('dragend', async (e) => {
                 const pos = e.target.getLatLng();
                 startPoint = { lat: pos.lat, lng: pos.lng };
                 if (endPoint) await analyzeSkyline();
+            });
+        }
+
+        if (hasMidPole && midPoint) {
+            const icon = L.divIcon({
+                html: '<div class="pole-marker pole-mid">中</div>',
+                className: '', iconSize: [28, 28], iconAnchor: [14, 14]
+            });
+            midMarker = L.marker([midPoint.lat, midPoint.lng], { icon: icon, draggable: true, zIndexOffset: 650 }).addTo(map);
+            // 中間柱はドラッグ中も架線ライン上に自動吸着し、縦断図をリアルタイム更新
+            midMarker.on('drag', (e) => {
+                midRatio = projectLatLngToRatio(e.target.getLatLng());
+                computeMidPointFromRatio();
+                e.target.setLatLng([midPoint.lat, midPoint.lng]);
+                midGroundEleOverride = null; // ドラッグ中はキャッシュ断面から瞬時補間
+                recomputeFromParams(true);
+            });
+            midMarker.on('dragend', async (e) => {
+                midRatio = projectLatLngToRatio(e.target.getLatLng());
+                computeMidPointFromRatio();
+                e.target.setLatLng([midPoint.lat, midPoint.lng]);
+                midGroundEleOverride = await getElevation(midPoint.lat, midPoint.lng);
+                recomputeFromParams(true);
             });
         }
 
@@ -577,6 +802,10 @@
             endMarker.on('drag', (e) => {
                 const pos = e.target.getLatLng();
                 endPoint = { lat: pos.lat, lng: pos.lng };
+                if (hasMidPole) {
+                    computeMidPointFromRatio();
+                    if (midMarker && midPoint) midMarker.setLatLng([midPoint.lat, midPoint.lng]);
+                }
                 renderQuickPreviewLine();
             });
             endMarker.on('dragend', async (e) => {
@@ -587,7 +816,6 @@
         }
     }
 
-    // ドラッグ中の軽量プレビュー（ポリゴン＋基準線のみ追従）
     function renderQuickPreviewLine() {
         skylineLayerGroup.clearLayers();
         if (!startPoint || !endPoint) return;
@@ -603,14 +831,12 @@
         }).addTo(skylineLayerGroup);
     }
 
-    // 解析結果に基づく架線・干渉区間・横取り範囲の描画
     function renderSkylineOverlays() {
         skylineLayerGroup.clearLayers();
         if (!startPoint || !endPoint || profileSamples.length < 2) return;
 
         const params = getParams();
 
-        // 横取り範囲ポリゴン
         const polyCoords = computeYardingPolygon(startPoint, endPoint, params.sideWidth);
         if (polyCoords) {
             L.polygon(polyCoords, {
@@ -618,12 +844,10 @@
             }).addTo(skylineLayerGroup);
         }
 
-        // 基本の架線ライン（青）
         L.polyline([[startPoint.lat, startPoint.lng], [endPoint.lat, endPoint.lng]], {
             color: '#007bff', weight: 4, opacity: 0.9, interactive: false
         }).addTo(skylineLayerGroup);
 
-        // クリアランス不足・地盤接触の区間を色分けハイライト
         for (let i = 0; i < profileSamples.length - 1; i++) {
             const pA = profileSamples[i];
             const pB = profileSamples[i + 1];
@@ -645,8 +869,11 @@
         if (!currentStats) return;
         const s = currentStats;
         const sign = s.diffH >= 0 ? '+' : '';
+        const spanText = s.hasMidPole
+            ? `水平距離: <strong>${s.horizDist.toFixed(0)}m</strong>（${s.L1.toFixed(0)}m + ${s.L2.toFixed(0)}m）`
+            : `水平距離: <strong>${s.horizDist.toFixed(0)}m</strong>`;
         const summaryHtml =
-            `水平距離: <strong>${s.horizDist.toFixed(0)}m</strong>` +
+            `${spanText}` +
             ` / 斜距離: <strong>${s.slopeDist.toFixed(0)}m</strong>` +
             ` / 高低差: <strong>${sign}${s.diffH.toFixed(1)}m</strong>` +
             ` / 傾斜角: <strong>${s.slopeDeg.toFixed(1)}°</strong>` +
@@ -662,70 +889,91 @@
         } else if (s.hasClearanceWarn) {
             badge.className = 'badge-warn';
             badge.textContent = '⚠️ 必要地上高が不足する区間あり';
+        } else if (s.midUpliftCaution) {
+            badge.className = 'badge-warn';
+            badge.textContent = '✅ 地上高OK（中間柱の浮き上がり注意）';
         } else {
             badge.className = 'badge-ok';
             badge.textContent = '✅ 必要地上高を確保';
         }
     }
 
-    // --- 7. 縦断図 (Chart.js + 元柱/先柱縦線プラグイン) ---
+    // --- 7. 縦断図 (Chart.js リニアX軸 + 元柱/中間柱/先柱描画プラグイン) ---
     const poleDrawingPlugin = {
         id: 'poleDrawingPlugin',
         afterDatasetsDraw(chart) {
             if (!currentStats || profileSamples.length < 2) return;
             const { ctx, scales: { x, y } } = chart;
-            const lastIdx = profileSamples.length - 1;
+            const s = currentStats;
 
             ctx.save();
-            // 元柱（緑の縦線）
+            // 元柱（緑）
             const x0 = x.getPixelForValue(0);
-            const y0Bottom = y.getPixelForValue(currentStats.zStart);
-            const y0Top = y.getPixelForValue(currentStats.H1);
             ctx.strokeStyle = '#28a745';
             ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.moveTo(x0, y0Bottom);
-            ctx.lineTo(x0, y0Top);
+            ctx.moveTo(x0, y.getPixelForValue(s.zStart));
+            ctx.lineTo(x0, y.getPixelForValue(s.H1));
             ctx.stroke();
 
-            // 先柱（赤の縦線）
-            const x1 = x.getPixelForValue(lastIdx);
-            const y1Bottom = y.getPixelForValue(currentStats.zEnd);
-            const y1Top = y.getPixelForValue(currentStats.H2);
+            // 中間柱（紫）
+            if (s.hasMidPole && s.midDist !== null) {
+                const xm = x.getPixelForValue(s.midDist);
+                const ymTop = y.getPixelForValue(s.Hm);
+                ctx.strokeStyle = '#6f42c1';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(xm, y.getPixelForValue(s.zMid));
+                ctx.lineTo(xm, ymTop);
+                ctx.stroke();
+
+                // 中間柱の頂点マーク
+                ctx.fillStyle = '#6f42c1';
+                ctx.beginPath();
+                ctx.arc(xm, ymTop, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // 先柱（赤）
+            const x1 = x.getPixelForValue(s.horizDist);
             ctx.strokeStyle = '#dc3545';
             ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.moveTo(x1, y1Bottom);
-            ctx.lineTo(x1, y1Top);
+            ctx.moveTo(x1, y.getPixelForValue(s.zEnd));
+            ctx.lineTo(x1, y.getPixelForValue(s.H2));
             ctx.stroke();
             ctx.restore();
         }
     };
 
     function updateChart() {
-        if (profileSamples.length < 2) return;
+        if (profileSamples.length < 2 || !currentStats) return;
         document.getElementById('empty-guide').style.display = 'none';
 
         const ctx = document.getElementById('profileChart').getContext('2d');
-        const labels = profileSamples.map(p => `${Math.round(p.dist)}m`);
-        const groundData = profileSamples.map(p => p.groundEle);
-        const reqData = profileSamples.map(p => p.reqEle);
-        const chordData = profileSamples.map(p => p.chordEle);
-        const loadData = profileSamples.map(p => p.loadEle);
+        const groundData = profileSamples.map(p => ({ x: p.dist, y: p.groundEle }));
+        const reqData = profileSamples.map(p => ({ x: p.dist, y: p.reqEle }));
+        const chordData = profileSamples.map(p => ({ x: p.dist, y: p.chordEle }));
+        const loadData = profileSamples.map(p => ({ x: p.dist, y: p.loadEle }));
 
         const loadPointColors = profileSamples.map(p => {
+            if (p.isMid) return '#6f42c1';
             if (p.status === 'ng') return '#dc3545';
             if (p.status === 'warn') return '#ff9800';
             return '#007bff';
         });
         const loadPointRadii = profileSamples.map((p, idx) => {
+            if (p.isMid) return 5;
             if (idx === 0 || idx === profileSamples.length - 1) return 4;
-            if (p.status === 'ng') return 4.5;
+            if (p.status === 'ng') return 4;
             if (p.status === 'warn') return 3.5;
             return 0;
         });
 
-        const allVals = [...groundData, ...reqData, ...chordData, ...loadData];
+        const allVals = profileSamples.flatMap(p => [p.groundEle, p.reqEle, p.chordEle, p.loadEle]);
         const minY = Math.floor((Math.min(...allVals) - 5) / 5) * 5;
         const maxY = Math.ceil((Math.max(...allVals) + 5) / 5) * 5;
 
@@ -735,7 +983,6 @@
             type: 'line',
             plugins: [poleDrawingPlugin],
             data: {
-                labels: labels,
                 datasets: [
                     {
                         label: '荷重軌跡線（たわみ）',
@@ -747,7 +994,7 @@
                         pointRadius: loadPointRadii,
                         pointHoverRadius: 6,
                         fill: false,
-                        tension: 0.1
+                        tension: 0
                     },
                     {
                         label: '必要地上高ライン',
@@ -758,7 +1005,7 @@
                         pointRadius: 0,
                         pointHoverRadius: 4,
                         fill: false,
-                        tension: 0.1
+                        tension: 0
                     },
                     {
                         label: '地盤線（地形断面）',
@@ -769,24 +1016,26 @@
                         pointRadius: 0,
                         pointHoverRadius: 4,
                         fill: 'start',
-                        tension: 0.1
+                        tension: 0
                     },
                     {
-                        label: '元柱〜先柱 直線',
+                        label: '支柱間直線',
                         data: chordData,
                         borderColor: '#aaaaaa',
                         borderWidth: 1,
                         borderDash: [3, 3],
                         pointRadius: 0,
                         pointHoverRadius: 0,
-                        fill: false
+                        fill: false,
+                        tension: 0
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
+                animation: false,
+                interaction: { mode: 'nearest', axis: 'x', intersect: false },
                 layout: { padding: { left: 8, right: 20 } },
                 plugins: {
                     legend: {
@@ -801,6 +1050,7 @@
                                 let suffix = '';
                                 if (idx === 0) suffix = '（元柱）';
                                 else if (idx === profileSamples.length - 1) suffix = '（先柱）';
+                                else if (pt.isMid) suffix = '（中間柱）';
                                 return `水平距離: ${pt.dist.toFixed(1)}m ${suffix}`;
                             },
                             label: () => null,
@@ -819,8 +1069,15 @@
                 },
                 scales: {
                     x: {
+                        type: 'linear',
+                        min: 0,
+                        max: Math.ceil(currentStats.horizDist),
                         title: { display: true, text: '元柱からの水平距離 (m)', font: { size: 11 } },
-                        ticks: { maxTicksLimit: 12, font: { size: 11 } }
+                        ticks: {
+                            maxTicksLimit: 12,
+                            font: { size: 11 },
+                            callback: (val) => `${Math.round(val)}m`
+                        }
                     },
                     y: {
                         min: minY,
@@ -833,7 +1090,7 @@
         });
     }
 
-    // --- 8. KML保存・読込（Google Earth 3D立体表示対応） ---
+    // --- 8. KML保存・読込（Google Earth 3D立体表示・中間柱対応） ---
     function saveKML() {
         if (!startPoint || !endPoint || profileSamples.length < 2) {
             alert('保存する架線データがありません。元柱と先柱を設置してください。');
@@ -849,11 +1106,12 @@
         kml += '<kml xmlns="http://www.opengis.net/kml/2.2">\n';
         kml += '  <Document>\n';
         kml += '    <name>架線計画ルート</name>\n';
-        kml += `    <description>架線計画v0.1 / 水平距離:${s.horizDist.toFixed(0)}m 斜距離:${s.slopeDist.toFixed(0)}m 垂下比:${sagPercent}% 最小地上高:${s.minClearanceVal.toFixed(1)}m</description>\n`;
+        kml += `    <description>架線計画v0.2 / 水平距離:${s.horizDist.toFixed(0)}m 斜距離:${s.slopeDist.toFixed(0)}m 垂下比:${sagPercent}% 最小地上高:${s.minClearanceVal.toFixed(1)}m</description>\n`;
 
         // 再読込用メタデータ
         kml += '    <ExtendedData>\n';
         kml += `      <Data name="poleStartH"><value>${params.poleStartH}</value></Data>\n`;
+        kml += `      <Data name="poleMidH"><value>${params.poleMidH}</value></Data>\n`;
         kml += `      <Data name="poleEndH"><value>${params.poleEndH}</value></Data>\n`;
         kml += `      <Data name="sagRatio"><value>${sagPercent}</value></Data>\n`;
         kml += `      <Data name="minClearance"><value>${params.minClearance}</value></Data>\n`;
@@ -862,11 +1120,14 @@
         kml += `      <Data name="startLng"><value>${startPoint.lng}</value></Data>\n`;
         kml += `      <Data name="endLat"><value>${endPoint.lat}</value></Data>\n`;
         kml += `      <Data name="endLng"><value>${endPoint.lng}</value></Data>\n`;
+        kml += `      <Data name="hasMidPole"><value>${hasMidPole ? '1' : '0'}</value></Data>\n`;
+        kml += `      <Data name="midRatio"><value>${midRatio.toFixed(6)}</value></Data>\n`;
         kml += '    </ExtendedData>\n';
 
         // スタイル定義（KML色順は aabbggrr）
         kml += '    <Style id="skylineStyle"><LineStyle><color>ff00ffff</color><width>4</width></LineStyle></Style>\n';
         kml += '    <Style id="poleStartStyle"><LineStyle><color>ff00dd00</color><width>5</width></LineStyle></Style>\n';
+        kml += '    <Style id="poleMidStyle"><LineStyle><color>ffc1426f</color><width>5</width></LineStyle></Style>\n';
         kml += '    <Style id="poleEndStyle"><LineStyle><color>ff0000ee</color><width>5</width></LineStyle></Style>\n';
         kml += '    <Style id="yardingStyle"><LineStyle><color>ffb8a217</color><width>2</width></LineStyle><PolyStyle><color>40ffff00</color></PolyStyle></Style>\n';
 
@@ -885,7 +1146,7 @@
         kml += '      </LineString>\n';
         kml += '    </Placemark>\n';
 
-        // 2) 元柱（3D垂直ライン＋頂点ピン）
+        // 2) 元柱
         kml += '    <Placemark>\n';
         kml += `      <name>元柱 (柱高${params.poleStartH}m)</name>\n`;
         kml += `      <description>地盤標高: ${s.zStart.toFixed(1)}m / 架設高: ${s.H1.toFixed(1)}m</description>\n`;
@@ -905,7 +1166,29 @@
         kml += '      </Point>\n';
         kml += '    </Placemark>\n';
 
-        // 3) 先柱（3D垂直ライン＋頂点ピン）
+        // 3) 中間柱（設置時のみ）
+        if (hasMidPole && midPoint) {
+            kml += '    <Placemark>\n';
+            kml += `      <name>中間柱 (柱高${params.poleMidH}m)</name>\n`;
+            kml += `      <description>元柱から ${s.midDist.toFixed(1)}m / 地盤標高: ${s.zMid.toFixed(1)}m / 架設高: ${s.Hm.toFixed(1)}m</description>\n`;
+            kml += '      <styleUrl>#poleMidStyle</styleUrl>\n';
+            kml += '      <LineString>\n';
+            kml += '        <altitudeMode>absolute</altitudeMode>\n';
+            kml += `        <coordinates>${midPoint.lng.toFixed(6)},${midPoint.lat.toFixed(6)},${s.zMid.toFixed(2)} ${midPoint.lng.toFixed(6)},${midPoint.lat.toFixed(6)},${s.Hm.toFixed(2)}</coordinates>\n`;
+            kml += '      </LineString>\n';
+            kml += '    </Placemark>\n';
+
+            kml += '    <Placemark>\n';
+            kml += '      <name>中間柱</name>\n';
+            kml += `      <description>元柱から ${s.midDist.toFixed(1)}m / 地盤標高: ${s.zMid.toFixed(1)}m / 柱高: ${params.poleMidH}m</description>\n`;
+            kml += '      <Point>\n';
+            kml += '        <altitudeMode>absolute</altitudeMode>\n';
+            kml += `        <coordinates>${midPoint.lng.toFixed(6)},${midPoint.lat.toFixed(6)},${s.Hm.toFixed(2)}</coordinates>\n`;
+            kml += '      </Point>\n';
+            kml += '    </Placemark>\n';
+        }
+
+        // 4) 先柱
         kml += '    <Placemark>\n';
         kml += `      <name>先柱 (柱高${params.poleEndH}m)</name>\n`;
         kml += `      <description>地盤標高: ${s.zEnd.toFixed(1)}m / 架設高: ${s.H2.toFixed(1)}m</description>\n`;
@@ -925,7 +1208,7 @@
         kml += '      </Point>\n';
         kml += '    </Placemark>\n';
 
-        // 4) 横取り集材範囲ポリゴン（地表貼り付け）
+        // 5) 横取り集材範囲ポリゴン
         if (polyCoords) {
             kml += '    <Placemark>\n';
             kml += `      <name>横取り範囲（片側${params.sideWidth}m）</name>\n`;
@@ -967,7 +1250,6 @@
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(e.target.result, 'text/xml');
 
-                // まずExtendedDataからの完全復元を試みる
                 const dataNodes = xmlDoc.getElementsByTagName('Data');
                 const meta = {};
                 for (let i = 0; i < dataNodes.length; i++) {
@@ -977,16 +1259,20 @@
                 }
 
                 if (meta.poleStartH) document.getElementById('poleStartH').value = meta.poleStartH;
+                if (meta.poleMidH) document.getElementById('poleMidH').value = meta.poleMidH;
                 if (meta.poleEndH) document.getElementById('poleEndH').value = meta.poleEndH;
                 if (meta.sagRatio) document.getElementById('sagRatio').value = meta.sagRatio;
                 if (meta.minClearance) document.getElementById('minClearance').value = meta.minClearance;
                 if (meta.sideWidth) document.getElementById('sideWidth').value = meta.sideWidth;
 
+                hasMidPole = (meta.hasMidPole === '1');
+                midRatio = meta.midRatio ? Math.max(0.05, Math.min(0.95, parseFloat(meta.midRatio))) : 0.5;
+                updateMidPoleButtonUI();
+
                 if (meta.startLat && meta.startLng && meta.endLat && meta.endLng) {
                     startPoint = { lat: parseFloat(meta.startLat), lng: parseFloat(meta.startLng) };
                     endPoint = { lat: parseFloat(meta.endLat), lng: parseFloat(meta.endLng) };
                 } else {
-                    // 外部作成のKMLでも先頭LineStringの始点・終点から読み込み
                     const lineStrings = xmlDoc.getElementsByTagName('LineString');
                     if (lineStrings.length === 0) {
                         alert('KMLファイルから架線ライン（LineString）を見つけられませんでした。');
@@ -1163,7 +1449,6 @@
             canvas.height = (maxTileY - minTileY + 1) * tw;
             const ctx = canvas.getContext('2d');
 
-            // 現在表示中のベースマップに合わせてタイル取得（オルソ表示中ならオルソ、標準なら標準）
             const isOrtho = map.hasLayer(orthoMap);
             const promises = [];
             for (let x = minTileX; x <= maxTileX; x++) {
@@ -1184,7 +1469,6 @@
             }
             await Promise.all(promises);
 
-            // 5m標高色分けがONの場合は合成
             if (elevationOverlay) {
                 const overlayImg = new Image();
                 overlayImg.crossOrigin = 'anonymous';
@@ -1203,7 +1487,6 @@
                 });
             }
 
-            // 架線・横取り範囲・干渉区間・元柱/先柱の描画
             if (startPoint && endPoint) {
                 const params = getParams();
                 const polyCoords = computeYardingPolygon(startPoint, endPoint, params.sideWidth);
@@ -1226,7 +1509,6 @@
                     ctx.setLineDash([]);
                 }
 
-                // 基本架線ライン
                 const p1 = map.project([startPoint.lat, startPoint.lng], z);
                 const p2 = map.project([endPoint.lat, endPoint.lng], z);
                 ctx.beginPath();
@@ -1236,7 +1518,6 @@
                 ctx.lineTo(p2.x - minTileX * tw, p2.y - minTileY * tw);
                 ctx.stroke();
 
-                // 干渉区間ハイライト
                 for (let i = 0; i < profileSamples.length - 1; i++) {
                     const pA = profileSamples[i];
                     const pB = profileSamples[i + 1];
@@ -1254,7 +1535,6 @@
                     }
                 }
 
-                // 元柱・先柱マーカー
                 const drawPole = (pt, color, label) => {
                     const cx = pt.x - minTileX * tw;
                     const cy = pt.y - minTileY * tw;
@@ -1272,10 +1552,13 @@
                     ctx.fillText(label, cx, cy);
                 };
                 drawPole(p1, '#28a745', '元');
+                if (hasMidPole && midPoint) {
+                    const pm = map.project([midPoint.lat, midPoint.lng], z);
+                    drawPole(pm, '#6f42c1', '中');
+                }
                 drawPole(p2, '#dc3545', '先');
             }
 
-            // A4枠でクロップ
             const pxWest = Math.round(topLeft.x - minTileX * tw);
             const pxNorth = Math.round(topLeft.y - minTileY * tw);
             const cropW = Math.round(bottomRight.x - topLeft.x);
@@ -1291,7 +1574,6 @@
 
             const exportDataUrl = cropCanvas.toDataURL('image/jpeg', 0.92);
 
-            // Exif位置情報埋め込み（林小班図アプリ互換）
             const s = bounds.getSouth().toFixed(6);
             const w = bounds.getWest().toFixed(6);
             const n = bounds.getNorth().toFixed(6);
